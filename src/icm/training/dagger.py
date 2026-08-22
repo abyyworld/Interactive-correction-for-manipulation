@@ -139,14 +139,17 @@ def collect_interactive_episode(
         supervisor.reset(env, seed=seed)
 
     snapshots: dict[int, dict] = {}
-    phases: list[int] = []
+    #: Phase at each step of the *original* rollout. The rewind target is resolved
+    #: against this, because "the start of the phase the supervisor blamed" refers
+    #: to the episode they watched, not to the re-demonstration.
+    rollout_phases: list[int] = []
     frames: list[tuple[np.ndarray, dict, int]] = []  # (action, obs, phase)
 
     takeover = None
     for step in range(env.config.max_episode_steps):
         if step % snapshot_every == 0:
             snapshots[step] = env.get_state()
-        phases.append(int(info["phase"]))
+        rollout_phases.append(int(info["phase"]))
 
         command = supervisor.poll(env, obs, info, step)
         if command.engaged:
@@ -185,7 +188,8 @@ def collect_interactive_episode(
         recorder_episode.finish(
             success=res.success_before,
             ground_truth=(gt_fn(env) if gt_fn is not None else {}),
-            extra={"phase_timeline": phases, "strategy": strategy.value},
+            extra={"phase_timeline": rollout_phases[: len(frames)],
+                   "strategy": strategy.value},
         )
         return res
 
@@ -198,7 +202,7 @@ def collect_interactive_episode(
         symptom_step=res.symptom_step,
         attributed_phase=res.attributed_phase,
         root_onset_step=res.root_onset_step,
-        phases=phases,
+        phases=rollout_phases,
     )
     rewind = int(np.clip(rewind, 0, max(0, len(frames))))
     res.rewind_step = rewind
@@ -218,6 +222,10 @@ def collect_interactive_episode(
 
     obs = env.observation()
     info = env.info_dict()
+    # The stored timeline must describe the *recorded* episode: the steps after
+    # the rewind point never happened in the version that was saved, so keeping
+    # them would misalign every phase lookup past the rewind.
+    recorded_phases: list[int] = rollout_phases[:rewind]
     corrective.resume_from_state(env)
     remaining = env.config.max_episode_steps - res.n_policy_steps
     for _ in range(max(0, remaining)):
@@ -225,8 +233,8 @@ def collect_interactive_episode(
         payload = {k: obs[k] for k in record_keys if k in obs}
         recorder_episode.expert_step(action, phase=int(info["phase"]), **payload)
         res.n_correction_steps += 1
+        recorded_phases.append(int(info["phase"]))
         obs, reward, terminated, truncated, info = env.step(action)
-        phases.append(int(info["phase"]))
         if terminated or truncated:
             break
 
@@ -248,7 +256,7 @@ def collect_interactive_episode(
     recorder_episode.finish(
         success=res.success_after,
         ground_truth=ground_truth,
-        extra={"phase_timeline": phases, "strategy": strategy.value},
+        extra={"phase_timeline": recorded_phases, "strategy": strategy.value},
     )
     return res
 

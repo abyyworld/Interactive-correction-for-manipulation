@@ -134,3 +134,25 @@ def test_explicit_target_overrides_randomisation():
     assert env.target_name == "distractor_a"
     assert "blue" in env.instruction
     env.close()
+
+
+def test_state_restore_includes_phase_history(env):
+    """Phase labels depend on history, so restoring qpos alone is not enough."""
+    from icm.control.scripted import ScriptedExpert
+
+    env.reset(seed=21)
+    expert = ScriptedExpert()
+    expert.reset()
+    for _ in range(env.config.max_episode_steps):
+        _, _, term, trunc, info = env.step(expert.act(env))
+        if env.tracker.ever_lifted:
+            break
+        if term or trunc:
+            break
+    assert env.tracker.ever_lifted
+
+    snapshot = env.get_state()
+    env.reset(seed=21)
+    assert not env.tracker.ever_lifted  # fresh episode forgot it
+    env.set_state(snapshot)
+    assert env.tracker.ever_lifted  # restore brought the history back

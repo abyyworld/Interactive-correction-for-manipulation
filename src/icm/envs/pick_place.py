@@ -581,10 +581,7 @@ class PickPlaceEnv:
         self._no_contact_steps = int(state.get("no_contact_steps", 0))
         self._instruction = state.get("instruction", self._instruction)
         tr = state["tracker"]
-        self.tracker.reset()
-        self.tracker._phase = Phase(tr["phase"])
-        self.tracker._ever_grasped = bool(tr["ever_grasped"])
-        self.tracker._ever_lifted = bool(tr["ever_lifted"])
+        self.tracker.restore(tr["phase"], tr["ever_grasped"], tr["ever_lifted"])
         mujoco.mj_forward(self.model, self.data)
         self._last_info = self._compute_info()
 

@@ -132,6 +132,20 @@ class PhaseTracker:
             return Phase.GRASP
         return Phase.APPROACH
 
+    def restore(self, phase: Phase | int, ever_grasped: bool, ever_lifted: bool) -> None:
+        """Restore tracker state as part of an environment snapshot restore.
+
+        Phase labels depend on history (whether the object was ever grasped or
+        lifted), so restoring qpos alone would leave the tracker describing a
+        different episode than the physics does - and the counterfactual rewind
+        protocol restores state constantly.
+        """
+        self.reset()
+        self._phase = Phase(int(phase))
+        self._candidate = self._phase
+        self._ever_grasped = bool(ever_grasped)
+        self._ever_lifted = bool(ever_lifted)
+
     def update(self, s: PhaseInputs) -> Phase:
         """Advance the tracker one control step and return the current phase."""
         if s.grasped:
