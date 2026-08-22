@@ -246,3 +246,26 @@ A few findings that cost real debugging time and are documented in the commits:
 ## License
 
 MIT.
+
+## Platform support
+
+Tested on Linux (including WSL2), macOS and Windows. The rendering backend is
+selected at import time — EGL when a GPU is present, OSMesa on a headless Linux
+box, and the platform default on macOS and Windows. Set `MUJOCO_GL` to override.
+
+| platform | notes |
+|---|---|
+| **Linux / WSL2** | `sudo apt install libosmesa6 libgl1 libegl1` first. With a GPU, EGL is selected automatically and renders ~50× faster. |
+| **macOS** (Intel or Apple silicon) | Works out of the box; no GL packages needed. PyTorch uses MPS. |
+| **Windows** | Works natively. If you do not have `make`, call the CLIs directly (below). |
+
+Every `make` target is a thin wrapper, so nothing needs `make`:
+
+```bash
+python -m icm.envs.assets.fetch                      # make assets
+python -m pytest -q                                  # make test
+python -m icm.cli.study -o runs/study -n 40 --report # make study
+python -m icm.cli.collect -o runs/demos -n 800       # make demos
+python -m icm.cli.train runs/demos -o runs/bc        # make train
+python -m icm.cli.evaluate --checkpoint runs/bc/checkpoint.pt -n 100
+```

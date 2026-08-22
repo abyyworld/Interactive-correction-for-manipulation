@@ -52,6 +52,9 @@ class DatasetConfig:
     state_only_cache_size: int = 512
     correction_weight: float = 1.0
     demo_weight: float = 1.0
+    #: Closed vocabulary for language conditioning. Empty disables it. When set,
+    #: each frame carries its episode's instruction encoded as a bag of words.
+    vocab: tuple[str, ...] = ()
 
 
 class EpisodeCache:
@@ -95,12 +98,19 @@ class InterventionDataset:
         self.caches = [EpisodeCache(r, cache_size) for r in self.readers]
 
         self.samples: list[tuple[int, str, int, float]] = []  # (reader, episode, t, weight)
+        self._instructions: dict[tuple[int, str], str] = {}
+        self._encoder = None
+        if self.config.vocab:
+            from ..policies.language import Vocabulary
+
+            self._encoder = Vocabulary(tuple(self.config.vocab))
         self._build_index()
 
     def _build_index(self) -> None:
         cfg = self.config
         for ri, reader in enumerate(self.readers):
             for meta in reader.episodes():
+                self._instructions[(ri, meta.episode_id)] = meta.instruction
                 spans = []
                 for seg in meta.interventions:
                     start, end = corrected_span(seg, meta, cfg.credit)
@@ -148,6 +158,12 @@ class InterventionDataset:
         for key in cfg.image_keys:
             if key in data:
                 out[key] = data[key][t]  # uint8; normalised on device
+        if self._encoder is not None:
+            # Encoded per frame from the episode's own instruction. Supplying a
+            # placeholder here instead would leave the language pathway wired up
+            # but carrying no information, which trains and evaluates without
+            # ever failing visibly.
+            out["instruction"] = self._encoder.encode(self._instructions.get((ri, episode_id), ""))
         return out
 
     def subsample(self, n: int, seed: int = 0) -> None:

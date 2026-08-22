@@ -102,3 +102,35 @@ def test_grasp_detection_is_debounced(env):
         if term or trunc:
             break
     assert latched_dropouts <= raw_dropouts
+
+
+def test_instruction_names_the_actual_target():
+    """A language-conditioned task where the target never changes measures nothing."""
+    from icm.envs.pick_place import EnvConfig, PickPlaceEnv
+    from icm.policies.language import Vocabulary, instruction_is_load_bearing
+
+    env = PickPlaceEnv(EnvConfig(render_images=False, randomize_target=True), seed=0)
+    instructions, targets = [], []
+    for seed in range(12):
+        env.reset(seed=seed)
+        instructions.append(env.instruction)
+        targets.append(env.target_name)
+        assert env.target_spec.color_word in env.instruction
+    assert instruction_is_load_bearing(instructions, targets)
+
+    vocab = Vocabulary.from_object_specs(env.object_specs)
+    codes = {i: tuple(vocab.encode(i)) for i in set(instructions)}
+    # Distinct instructions must encode distinctly, or the policy cannot tell
+    # which object is meant.
+    assert len(set(codes.values())) == len(codes)
+    env.close()
+
+
+def test_explicit_target_overrides_randomisation():
+    from icm.envs.pick_place import EnvConfig, PickPlaceEnv
+
+    env = PickPlaceEnv(EnvConfig(render_images=False, randomize_target=True), seed=0)
+    env.reset(seed=1, target="distractor_a")
+    assert env.target_name == "distractor_a"
+    assert "blue" in env.instruction
+    env.close()

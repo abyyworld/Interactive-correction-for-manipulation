@@ -1,0 +1,15 @@
+# State-based policy: no cameras, ground-truth object poses as input.
+#
+# Not deployable - a real robot has no such observation. It exists so the
+# credit-assignment experiment runs on CPU in minutes rather than needing the
+# full image pipeline and a GPU, and as an upper bound on what the visual
+# policy could reach with perfect perception.
+state_dim: 27
+action_dim: 7
+chunk: 8
+backbone: small
+image_keys: []
+feature_dim: 256
+hidden: [512, 512]
+dropout: 0.1
+vocab: []

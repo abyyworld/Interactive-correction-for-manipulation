@@ -1,0 +1,18 @@
+# Visual behaviour-cloning policy. Maps to icm.policies.bc.PolicyConfig.
+state_dim: 24            # proprio; 27 when state_key is "privileged"
+action_dim: 7            # dx dy dz droll dpitch dyaw gripper
+chunk: 8                 # future actions predicted per observation
+
+backbone: resnet18       # resnet18 | resnet34 | small (no torchvision needed)
+pretrained: false        # true needs network access at first construction
+image_keys: [wrist_rgb, scene_rgb]
+image_size: 84
+feature_dim: 256
+hidden: [512, 512]
+dropout: 0.1
+
+# Templated language conditioning. Leave empty to disable. Requires the env's
+# randomize_target to be on, or the instruction carries no information and a
+# policy that ignores it scores identically to one that reads it.
+vocab: []
+film: true               # multiplicative conditioning; concatenation gets ignored

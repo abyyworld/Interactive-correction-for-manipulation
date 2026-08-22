@@ -60,20 +60,15 @@ class TrainConfig:
 class TorchFrames(Dataset):
     """Adapts the numpy dataset to PyTorch, restricted to a set of indices."""
 
-    def __init__(self, base: InterventionDataset, indices: np.ndarray, vocab: tuple[str, ...] = ()):
+    def __init__(self, base: InterventionDataset, indices: np.ndarray):
         self.base = base
         self.indices = indices
-        self.vocab = vocab
 
     def __len__(self) -> int:
         return len(self.indices)
 
     def __getitem__(self, i: int) -> dict[str, torch.Tensor]:
-        sample = self.base[int(self.indices[i])]
-        out = {k: torch.as_tensor(v) for k, v in sample.items()}
-        if self.vocab:
-            out["instruction"] = torch.zeros(len(self.vocab))
-        return out
+        return {k: torch.as_tensor(v) for k, v in self.base[int(self.indices[i])].items()}
 
 
 def episode_split(
@@ -134,13 +129,22 @@ def train_bc(
             "episode contained an intervention."
         )
     pcfg = policy_config or PolicyConfig(chunk=dcfg.chunk)
+    if pcfg.vocab and not dcfg.vocab:
+        # Keep the two in lockstep: a policy expecting an instruction vector from
+        # a dataset that does not produce one fails at the first batch.
+        raise ValueError(
+            "policy declares a vocabulary but the dataset does not encode instructions; "
+            "set DatasetConfig.vocab to the same words"
+        )
+    if dcfg.vocab and not pcfg.vocab:
+        pcfg.vocab = tuple(dcfg.vocab)
     sample = base[0]
     pcfg.state_dim = int(sample["state"].shape[0])
     pcfg.chunk = dcfg.chunk
 
     train_idx, val_idx = episode_split(base, cfg.val_fraction, cfg.seed)
-    train_ds = TorchFrames(base, train_idx, pcfg.vocab)
-    val_ds = TorchFrames(base, val_idx, pcfg.vocab) if len(val_idx) else None
+    train_ds = TorchFrames(base, train_idx)
+    val_ds = TorchFrames(base, val_idx) if len(val_idx) else None
 
     device = cfg.resolve_device()
     # Workers each hold their own shard cache, so keep the count modest: this is

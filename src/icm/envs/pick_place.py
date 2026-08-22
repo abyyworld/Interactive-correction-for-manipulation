@@ -67,6 +67,12 @@ class EnvConfig:
     max_episode_steps: int = 220  # 11 s at 20 Hz
     n_distractors: int = 2
     randomize_objects: bool = True
+    #: Choose the target object at random each episode and phrase the
+    #: instruction accordingly. With this off, "pick up the red block" is the
+    #: only instruction ever seen and a language-conditioned policy can ignore
+    #: the text entirely while appearing to succeed - the classic way a
+    #: language-conditioned benchmark measures nothing.
+    randomize_target: bool = False
     min_object_separation: float = 0.11
     goal_radius: float = 0.06
     lift_height: float = 0.10
@@ -148,6 +154,7 @@ class PickPlaceEnv:
         self._left_finger = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "left_finger")
         self._right_finger = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "right_finger")
         self.target_name = self.object_specs[0].name
+        self._default_target = self.object_specs[0].name
 
         self.goal_pos = np.array(GOAL_POS, dtype=float)
         # Faults may weaken the gripper by lowering its force limit, which is a
@@ -225,10 +232,24 @@ class PickPlaceEnv:
                 )
         return out
 
-    def reset(self, seed: int | None = None, instruction: str | None = None) -> dict[str, Any]:
+    def reset(
+        self,
+        seed: int | None = None,
+        instruction: str | None = None,
+        target: str | None = None,
+    ) -> dict[str, Any]:
         if seed is not None:
             self.np_random = np.random.default_rng(seed)
         cfg = self.config
+
+        if target is not None:
+            if target not in self._obj_body:
+                raise KeyError(f"unknown target object {target!r}")
+            self.target_name = target
+        elif cfg.randomize_target:
+            self.target_name = str(self.np_random.choice([s.name for s in self.object_specs]))
+        else:
+            self.target_name = self._default_target
 
         mujoco.mj_resetData(self.model, self.data)
         self.model.actuator_forcerange[self.robot.gripper_actuator_id] = (
@@ -266,9 +287,19 @@ class PickPlaceEnv:
         self._last_info = self._compute_info()
         return self.observation()
 
+    @property
+    def target_spec(self) -> ObjectSpec:
+        return next(s for s in self.object_specs if s.name == self.target_name)
+
     def default_instruction(self) -> str:
-        spec = self.object_specs[0]
-        return f"pick up the {spec.noun} and put it on the green pad"
+        """Templated instruction naming the current target object.
+
+        The goal is described as "the pad" rather than "the green pad" on
+        purpose: one of the objects is also green, and under a bag-of-words
+        encoding the colour word would then appear in every instruction and stop
+        discriminating between targets.
+        """
+        return f"pick up the {self.target_spec.noun} and place it on the pad"
 
     @property
     def instruction(self) -> str:
@@ -432,7 +463,7 @@ class PickPlaceEnv:
                 grasped=grasped,
                 gripper_width=self.robot.gripper_width,
                 object_speed=self.object_speed(),
-                object_half_height=self.object_specs[0].half,
+                object_half_height=self.target_spec.half,
             )
         )
         return EpisodeInfo(

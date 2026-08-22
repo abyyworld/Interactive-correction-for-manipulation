@@ -43,6 +43,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--backbone", default="resnet18", choices=["resnet18", "resnet34", "small"])
     ap.add_argument("--pretrained", action="store_true", help="ImageNet weights (needs network)")
     ap.add_argument("--image-size", type=int, default=84)
+    ap.add_argument("--language", action="store_true",
+                    help="condition on the recorded instructions (builds the vocabulary from them)")
     ap.add_argument("--supervision", default="corrections", choices=["corrections", "all", "demos"])
     ap.add_argument("--credit", default="onset", choices=["onset", "symptom", "stated", "oracle"])
     ap.add_argument(
@@ -76,12 +78,21 @@ def main(argv: list[str] | None = None) -> int:
         args.workers = 0
         args.eval_every = args.checkpoint_every = args.log_every = 50
 
+    vocab: tuple[str, ...] = ()
+    if args.language:
+        from ..policies.language import build_vocabulary_from_run
+
+        vocab = build_vocabulary_from_run(args.data[0]).words
+        if not args.quiet:
+            print(f"[language] vocabulary from recorded instructions: {vocab}")
+
     dcfg = DatasetConfig(
         supervision=args.supervision,
         credit=CreditAssignment(args.credit),
         chunk=args.chunk,
         image_keys=tuple(args.images),
         state_key=args.state_key,
+        vocab=vocab,
     )
     pcfg = PolicyConfig(
         chunk=args.chunk,
@@ -89,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         image_size=args.image_size,
         backbone=args.backbone,
         pretrained=args.pretrained,
+        vocab=vocab,
     )
     tcfg = TrainConfig(
         steps=args.steps,

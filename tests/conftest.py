@@ -1,9 +1,9 @@
-import os
-
 import pytest
 
-# Software rendering: these tests must run on a CI box with no GPU.
-os.environ.setdefault("MUJOCO_GL", "osmesa")
+# Importing icm selects a rendering backend appropriate to this platform, before
+# any MuJoCo object exists. Forcing "osmesa" here (as an earlier version did)
+# makes the suite fail on macOS and Windows, which have no OSMesa at all.
+import icm  # noqa: F401
 
 
 def _assets_available() -> bool:

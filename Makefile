@@ -11,9 +11,9 @@ RUNS    ?= runs
 EPISODES?= 200
 DEVICE  ?= auto
 
-# Software GL so everything works on a headless box with no GPU. Override with
-# MUJOCO_GL=egl on a machine with a GPU: it is roughly 50x faster to render.
-export MUJOCO_GL ?= osmesa
+# The rendering backend is chosen at runtime by icm/__init__.py: EGL when a GPU
+# is present, OSMesa on a headless Linux box, and the platform default on macOS
+# and Windows. Set MUJOCO_GL here only to override that.
 
 .PHONY: help
 help:
