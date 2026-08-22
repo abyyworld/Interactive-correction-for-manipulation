@@ -35,11 +35,18 @@ def _plt():
         import matplotlib.pyplot as plt
     except ImportError as exc:  # pragma: no cover - optional extra
         raise ImportError("plots need matplotlib: pip install 'icm[viz]'") from exc
-    plt.rcParams.update({
-        "figure.dpi": 140, "savefig.dpi": 140, "font.size": 9,
-        "axes.spines.top": False, "axes.spines.right": False,
-        "axes.grid": True, "grid.alpha": 0.25, "grid.linewidth": 0.6,
-    })
+    plt.rcParams.update(
+        {
+            "figure.dpi": 140,
+            "savefig.dpi": 140,
+            "font.size": 9,
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "axes.grid": True,
+            "grid.alpha": 0.25,
+            "grid.linewidth": 0.6,
+        }
+    )
     return plt
 
 
@@ -61,12 +68,28 @@ def plot_misattribution_by_lag(summary_path: str | Path, out_path: str | Path) -
     for i, (label, key, colour) in enumerate(series):
         vals = [by_lag[k].get(key, float("nan")) for k in lags]
         ns = [int(by_lag[k]["n"]) for k in lags]
-        errs = np.array([
-            [v - wilson_interval(int(round(v * n)), n)[0] if n else 0 for v, n in zip(vals, ns, strict=False)],
-            [wilson_interval(int(round(v * n)), n)[1] - v if n else 0 for v, n in zip(vals, ns, strict=False)],
-        ])
-        ax.bar(x + (i - 1) * width, vals, width, label=label, color=colour,
-               yerr=np.abs(errs), capsize=2.5, error_kw={"linewidth": 0.8})
+        errs = np.array(
+            [
+                [
+                    v - wilson_interval(int(round(v * n)), n)[0] if n else 0
+                    for v, n in zip(vals, ns, strict=False)
+                ],
+                [
+                    wilson_interval(int(round(v * n)), n)[1] - v if n else 0
+                    for v, n in zip(vals, ns, strict=False)
+                ],
+            ]
+        )
+        ax.bar(
+            x + (i - 1) * width,
+            vals,
+            width,
+            label=label,
+            color=colour,
+            yerr=np.abs(errs),
+            capsize=2.5,
+            error_kw={"linewidth": 0.8},
+        )
     ax.set_xticks(x)
     ax.set_xticklabels([LAG_LABELS.get(k, k) for k in lags])
     ax.set_ylabel("misattribution rate")
@@ -114,8 +137,10 @@ def plot_matched_pair(run_dir: str | Path, out_path: str | Path) -> Path:
     plt = _plt()
     rates = matched_pair_rates(run_dir)
     order = ["weak_grip", "lift_slip"]
-    labels = [f"weak_grip\ncause: grasp\n(n={rates['weak_grip'][1]})",
-              f"lift_slip\ncause: lift\n(n={rates['lift_slip'][1]})"]
+    labels = [
+        f"weak_grip\ncause: grasp\n(n={rates['weak_grip'][1]})",
+        f"lift_slip\ncause: lift\n(n={rates['lift_slip'][1]})",
+    ]
     values = [rates[k][0] for k in order]
 
     fig, ax = plt.subplots(figsize=(4.6, 3.4))
@@ -124,8 +149,10 @@ def plot_matched_pair(run_dir: str | Path, out_path: str | Path) -> Path:
         ax.text(i, v + 0.03, f"{100 * v:.0f}%", ha="center", fontsize=11, weight="bold")
     ax.set_ylabel("symptom-phase misattribution")
     ax.set_ylim(0, 1.18)
-    ax.set_title("Identical failure, opposite attribution\n(both drop the object during the lift)",
-                 fontsize=9)
+    ax.set_title(
+        "Identical failure, opposite attribution\n(both drop the object during the lift)",
+        fontsize=9,
+    )
     fig.tight_layout()
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -134,7 +161,37 @@ def plot_matched_pair(run_dir: str | Path, out_path: str | Path) -> Path:
     return out
 
 
-def plot_degradation(report_path: str | Path, out_path: str | Path) -> Path:
+def correction_start_coverage(run_root: str | Path) -> dict[str, float]:
+    """Fraction of corrections that begin in the task's first phase.
+
+    Every evaluation episode starts in APPROACH, so this measures how well each
+    strategy's corrective data covers the state distribution the policy is
+    actually launched from. It turned out to explain the policy results far
+    better than attribution accuracy did, so it is reported alongside them
+    rather than left implicit.
+    """
+    from interventionkit import RunReader
+
+    out: dict[str, float] = {}
+    for path in sorted(Path(run_root).glob("data_*")):
+        name = path.name.removeprefix("data_")
+        starts, total = 0, 0
+        for meta in RunReader(path).episodes():
+            with RunReader(path).open(meta.episode_id) as z:
+                actor, phase = z["actor"], z["phase"]
+            mask = actor != "policy"
+            if not mask.any():
+                continue
+            total += 1
+            starts += int(phase[mask][0] == 0)
+        if total:
+            out[name] = starts / total
+    return out
+
+
+def plot_degradation(
+    report_path: str | Path, out_path: str | Path, coverage: dict[str, float] | None = None
+) -> Path:
     """Policy success by credit-assignment strategy, with Wilson intervals."""
     plt = _plt()
     report = json.loads(Path(report_path).read_text())
@@ -148,16 +205,46 @@ def plot_degradation(report_path: str | Path, out_path: str | Path) -> Path:
         lows.append(e["success_rate"] - e["ci95_low"])
         highs.append(e["ci95_high"] - e["success_rate"])
 
-    fig, ax = plt.subplots(figsize=(5.2, 3.4))
+    fig, ax = plt.subplots(figsize=(6.0, 3.6))
     colours = {"onset": "#94a3b8", "symptom": "#60a5fa", "stated": "#f59e0b", "oracle": "#22c55e"}
-    ax.bar(order, rates, yerr=[lows, highs], capsize=4,
-           color=[colours.get(o, "#888") for o in order], width=0.6,
-           error_kw={"linewidth": 1.0})
+    ax.bar(
+        order,
+        rates,
+        yerr=[lows, highs],
+        capsize=4,
+        color=[colours.get(o, "#888") for o in order],
+        width=0.6,
+        error_kw={"linewidth": 1.0},
+    )
     ax.set_ylabel("task success rate")
-    ax.set_ylim(0, max(1.0, max(rates) * 1.3) if rates else 1.0)
-    ax.set_title("What credit assignment costs\n(only the rewind target differs)", fontsize=9)
+    ax.set_ylim(0, max(1.0, max(rates) * 1.35) if rates else 1.0)
     n = results[order[0]]["eval"]["n"] if order else 0
     ax.set_xlabel(f"credit assignment strategy   (n={n} evaluation episodes, 95% CI)", fontsize=8)
+
+    if coverage:
+        # Overlay the covariate that actually explains the ranking. Plotting only
+        # the success bars would invite the reader to attribute the difference to
+        # attribution accuracy, which the data does not support.
+        ax2 = ax.twinx()
+        ys = [coverage.get(o, float("nan")) for o in order]
+        ax2.plot(
+            order,
+            ys,
+            marker="o",
+            color="#111827",
+            linewidth=1.6,
+            label="corrections starting in APPROACH",
+        )
+        ax2.set_ylabel("fraction of corrections starting in APPROACH", fontsize=8)
+        ax2.set_ylim(0, 1.05)
+        ax2.grid(False)
+        ax2.legend(frameon=False, fontsize=8, loc="upper center")
+        ax.set_title(
+            "Corrective-data coverage, not attribution accuracy,\npredicts policy success",
+            fontsize=9,
+        )
+    else:
+        ax.set_title("What credit assignment costs\n(only the rewind target differs)", fontsize=9)
     fig.tight_layout()
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -204,7 +291,9 @@ def build_all(run_dir: str | Path, out_dir: str | Path = "docs/media") -> list[P
     run_dir, out_dir = Path(run_dir), Path(out_dir)
     made: list[Path] = []
     if (run_dir / "summary.json").is_file():
-        made.append(plot_misattribution_by_lag(run_dir / "summary.json", out_dir / "misattribution.png"))
+        made.append(
+            plot_misattribution_by_lag(run_dir / "summary.json", out_dir / "misattribution.png")
+        )
         try:
             made.append(plot_matched_pair(run_dir, out_dir / "matched_pair.png"))
         except (ValueError, FileNotFoundError):
@@ -212,5 +301,11 @@ def build_all(run_dir: str | Path, out_dir: str | Path = "docs/media") -> list[P
     if (run_dir / "sweep.json").is_file():
         made.append(plot_trace_sweep(run_dir / "sweep.json", out_dir / "trace_sweep.png"))
     if (run_dir / "degradation.json").is_file():
-        made.append(plot_degradation(run_dir / "degradation.json", out_dir / "degradation.png"))
+        made.append(
+            plot_degradation(
+                run_dir / "degradation.json",
+                out_dir / "degradation.png",
+                coverage=correction_start_coverage(run_dir),
+            )
+        )
     return made

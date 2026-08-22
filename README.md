@@ -60,6 +60,11 @@ drives misattribution is observational, not causal.* The "very delayed" row
 above is that finding: a category defined by causal distance that behaves
 exactly like the immediate one.
 
+**Whether that costs anything** is measured separately, and the answer is the
+most interesting thing here: **no, not in this setup** — see
+[Result 2](#result-2-perfect-attribution-bought-nothing--and-the-reason-is-the-finding).
+Perfect attribution did not beat a supervisor who was right 83% of the time.
+
 **Supporting numbers**
 
 | quantity | value |
@@ -194,13 +199,53 @@ Only the rewind target differs between conditions:
 | `stated` | the phase the supervisor blamed | what asking buys you |
 | `oracle` | the true cause | not implementable; the ceiling |
 
-A wrong attribution rewinds to states that were already fine, so the causal
-states never receive a corrective action. The gap between `stated` and `oracle`
-is the price of misattribution, in units of task success.
+Rewinding further necessarily yields *more* corrective frames — and not in the
+obvious direction: `onset` yields the most, because recovering from a failure
+takes longer than doing the task correctly. Every dataset is subsampled to the
+size of the smallest (10,558 frames), so "corrected the right states" is
+separated from "had more data".
 
-Rewinding further necessarily yields *more* corrective frames, so every dataset
-is subsampled to the size of the smallest. Otherwise "corrected the right
-states" cannot be separated from "had more data".
+### Result 2: perfect attribution bought nothing — and the reason is the finding
+
+The prediction was that rewinding to the true cause (`oracle`) would beat
+rewinding to the phase the supervisor blamed (`stated`), because only the former
+reliably corrects the states that caused the failure. It did not.
+
+<p align="center">
+  <img src="docs/media/degradation.png" alt="Policy success by credit assignment strategy" width="600">
+</p>
+
+| strategy | rewinds to | corrections starting in `approach` | policy success (n=250) |
+|---|---|---|---|
+| `onset` | takeover step | **87.8%** | **69.6%** [63.6, 75.0] |
+| `stated` | blamed phase | 34.6% | 22.0% [17.3, 27.5] |
+| `oracle` | true cause | 41.0% | 20.8% [16.2, 26.3] |
+| `symptom` | first visible | 27.1% | 11.2% [7.9, 15.7] |
+
+**`stated` vs `oracle`: +1.2 points, confidence intervals overlapping.** Giving
+the system perfect knowledge of the true cause did not measurably beat a
+supervisor who was right 83% of the time. The core hypothesis is not supported
+by this experiment.
+
+What *does* predict success is where the corrective demonstration **starts**.
+Every evaluation episode begins in `approach`. By the time a supervisor has
+reacted, the dropped object has settled and the phase tracker has correctly
+returned to `approach` — so the naive rewind produces corrections that begin at
+the start of the task, covering exactly the state distribution the policy is
+launched from. Rewinding earlier lands mid-failure, with the object still in
+flight and the phase still `lift` or `place`.
+
+For behaviour cloning, **initial-state coverage dominates causal correctness**.
+
+That is not evidence attribution does not matter. It is evidence that the rewind
+protocol as built trades coverage for causal correctness, and that the trade is
+unfavourable. A protocol that rewound to the cause *and* preserved coverage —
+re-running from reset rather than from a snapshot, or mixing in from-scratch
+demonstrations — would separate the two effects. That is the next experiment,
+and identifying it is what this negative result is worth.
+
+Reported as measured. The hypothesis was wrong in the direction that makes the
+project more informative, not less.
 
 ```bash
 make degradation

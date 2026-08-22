@@ -43,8 +43,11 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--backbone", default="resnet18", choices=["resnet18", "resnet34", "small"])
     ap.add_argument("--pretrained", action="store_true", help="ImageNet weights (needs network)")
     ap.add_argument("--image-size", type=int, default=84)
-    ap.add_argument("--language", action="store_true",
-                    help="condition on the recorded instructions (builds the vocabulary from them)")
+    ap.add_argument(
+        "--language",
+        action="store_true",
+        help="condition on the recorded instructions (builds the vocabulary from them)",
+    )
     ap.add_argument("--supervision", default="corrections", choices=["corrections", "all", "demos"])
     ap.add_argument("--credit", default="onset", choices=["onset", "symptom", "stated", "oracle"])
     ap.add_argument(

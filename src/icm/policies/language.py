@@ -31,9 +31,7 @@ TOKEN_RE = re.compile(r"[a-z]+")
 
 #: Words that carry no discriminative signal in these templates. Dropping them
 #: keeps the vocabulary small enough that a bag of words is not mostly noise.
-STOPWORDS = frozenset(
-    {"the", "a", "an", "and", "on", "it", "to", "put", "place", "up", "pick"}
-)
+STOPWORDS = frozenset({"the", "a", "an", "and", "on", "it", "to", "put", "place", "up", "pick"})
 
 
 def tokenize(text: str) -> list[str]:

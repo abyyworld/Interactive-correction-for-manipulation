@@ -46,6 +46,11 @@ class EvalResult:
     #: success rate cannot tell them apart. Phase progress resolves differences
     #: that would otherwise need several times the sample size.
     max_phases: list[int] = field(default_factory=list)
+    #: Per-episode outcome. Recorded rather than reconstructed: an earlier
+    #: version rebuilt the flags positionally as [True]*successes + [False]*rest,
+    #: which pairs outcomes with the wrong episodes and made DONE appear in the
+    #: failure breakdown - a state that by definition cannot be a failure.
+    outcomes: list[bool] = field(default_factory=list)
     interventions: int = 0
 
     @property
@@ -76,16 +81,12 @@ class EvalResult:
     def failure_breakdown(self) -> dict[str, int]:
         """Which phase failing episodes ended in - the actionable half of a result."""
         out: dict[str, int] = {}
-        for p, ok in zip(self.final_phases, self._success_flags(), strict=False):
+        for p, ok in zip(self.final_phases, self.outcomes, strict=False):
             if ok:
                 continue
             name = Phase(p).label
             out[name] = out.get(name, 0) + 1
         return out
-
-    def _success_flags(self) -> list[bool]:
-        flags = [True] * self.successes + [False] * (self.n - self.successes)
-        return flags[: len(self.final_phases)]
 
     def to_dict(self) -> dict[str, Any]:
         lo, hi = self.ci
@@ -119,6 +120,7 @@ def evaluate_agent(env, agent, n_episodes: int = 50, seed: int = 0, supervisor=N
         result.episode_lengths.append(r.steps)
         result.final_phases.append(int(r.final_phase))
         result.max_phases.append(max(r.phases) if r.phases else 0)
+        result.outcomes.append(bool(r.success))
         result.interventions += int(r.intervened)
     result.successes = successes
     return result

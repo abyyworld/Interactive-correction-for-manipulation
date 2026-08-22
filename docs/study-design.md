@@ -130,6 +130,45 @@ accuracy is the price of misattribution in units of task success.
 This is the only reason the environment guarantees **bit-exact** state restore.
 It is not a convenience feature.
 
+### What the experiment actually found
+
+The prediction failed, and the failure is the useful part.
+
+`stated` (rewind to the phase the supervisor blamed) and `oracle` (rewind to the
+true cause) are **statistically indistinguishable**: 22.0% versus 20.8% over 250
+evaluation episodes, intervals overlapping. Giving the system perfect causal
+knowledge did not beat a supervisor who was right 83% of the time.
+
+Meanwhile `onset` — the naive strategy with no rewind at all — reached 69.6%,
+far ahead of every rewinding condition.
+
+The covariate that explains the ranking is not attribution accuracy but where
+the corrective demonstration *begins*:
+
+| strategy | corrections starting in APPROACH | success |
+|---|---|---|
+| `onset` | 87.8% | 69.6% |
+| `oracle` | 41.0% | 20.8% |
+| `stated` | 34.6% | 22.0% |
+| `symptom` | 27.1% | 11.2% |
+
+Every evaluation episode starts in APPROACH. By the time the supervisor reacts,
+the dropped object has settled and the phase tracker has correctly reverted to
+APPROACH, so the naive rewind happens to produce corrections that begin at the
+start of the task. Rewinding earlier lands mid-failure, where the object is
+still in flight.
+
+So the rewind protocol as built **trades initial-state coverage for causal
+correctness**, and for behaviour cloning the coverage term dominates. The two
+effects are confounded in this design, which is a limitation of the protocol
+rather than a fact about attribution.
+
+The fix is straightforward and is the next experiment: rewind to the cause but
+re-run from the environment reset rather than from a mid-episode snapshot, so
+that every corrective demonstration starts from the task's initial distribution
+regardless of where the error was attributed. That isolates causal correctness
+from coverage, which this experiment could not.
+
 ### Why the corrections differ at all
 
 With `oracle`, the corrective demonstration begins from the *pre-failure* state —
@@ -166,12 +205,21 @@ the policy will keep entering.
 - **One task family.** Four phases, one object type, one goal. Whether the effect
   scales with task length is untested.
 
-## What the result predicts
+## What the results predict
 
-If misattribution is driven by *observability* rather than causal distance — as
-`wrong_object` suggests, being attributed perfectly despite the largest causal
-gap — then the cheapest intervention is not asking people to reason harder about
-causes. It is surfacing failures earlier: a grip-force readout, a slip indicator,
-anything that moves the symptom closer to the cause.
+Two things, from the two experiments.
 
-That is a testable prediction, and it is the one the VR study should test first.
+**From the attribution result.** Misattribution is driven by *observability*
+rather than causal distance — `wrong_object` is attributed perfectly despite
+having the largest causal gap in the set, because picking the wrong block is
+visible immediately. If that holds for people, the cheapest intervention is not
+asking them to reason harder about causes. It is surfacing failures earlier: a
+grip-force readout, a slip indicator, anything that moves the symptom closer to
+the cause. That is what the VR study should test first.
+
+**From the degradation result.** Before investing in eliciting attributions from
+supervisors, check whether the learner can use them. Here it could not: perfect
+attribution was indistinguishable from imperfect, while a coverage effect nobody
+was measuring moved success by 48 points. Any interactive-correction system
+should measure the coverage its corrections provide before attributing a
+difference to the quality of the corrections themselves.

@@ -188,8 +188,7 @@ def collect_interactive_episode(
         recorder_episode.finish(
             success=res.success_before,
             ground_truth=(gt_fn(env) if gt_fn is not None else {}),
-            extra={"phase_timeline": rollout_phases[: len(frames)],
-                   "strategy": strategy.value},
+            extra={"phase_timeline": rollout_phases[: len(frames)], "strategy": strategy.value},
         )
         return res
 
