@@ -40,6 +40,12 @@ class EvalResult:
     successes: int = 0
     episode_lengths: list[int] = field(default_factory=list)
     final_phases: list[int] = field(default_factory=list)
+    #: Deepest phase each episode reached. Binary success is a blunt instrument
+    #: for comparing policies that mostly fail: a policy that consistently
+    #: reaches GRASP is meaningfully better than one stuck in APPROACH, and the
+    #: success rate cannot tell them apart. Phase progress resolves differences
+    #: that would otherwise need several times the sample size.
+    max_phases: list[int] = field(default_factory=list)
     interventions: int = 0
 
     @property
@@ -49,6 +55,23 @@ class EvalResult:
     @property
     def ci(self) -> tuple[float, float]:
         return wilson_interval(self.successes, self.n)
+
+    @property
+    def mean_progress(self) -> float:
+        """Mean deepest phase reached, normalised to [0, 1] over the four phases."""
+        if not self.max_phases:
+            return float("nan")
+        return float(np.mean([min(p, 3) for p in self.max_phases]) / 3.0)
+
+    def phase_reach_rates(self) -> dict[str, float]:
+        """Fraction of episodes that reached at least each phase."""
+        if not self.max_phases:
+            return {}
+        arr = np.asarray(self.max_phases)
+        return {
+            Phase(p).label: float(np.mean(arr >= p))
+            for p in (Phase.GRASP, Phase.LIFT, Phase.PLACE, Phase.DONE)
+        }
 
     def failure_breakdown(self) -> dict[str, int]:
         """Which phase failing episodes ended in - the actionable half of a result."""
@@ -95,6 +118,7 @@ def evaluate_agent(env, agent, n_episodes: int = 50, seed: int = 0, supervisor=N
         successes += int(r.success)
         result.episode_lengths.append(r.steps)
         result.final_phases.append(int(r.final_phase))
+        result.max_phases.append(max(r.phases) if r.phases else 0)
         result.interventions += int(r.intervened)
     result.successes = successes
     return result

@@ -7,7 +7,10 @@ name = "icm"
 version = "0.1.0"
 description = "Interactive correction for manipulation: human-gated intervention learning with error-attribution analysis"
 readme = "README.md"
-requires-python = ">=3.10"
+# Upper bound is real, not defensive: MuJoCo publishes no wheel for 3.14 yet,
+# so pip falls back to building from source and fails with an unhelpful
+# "MUJOCO_PATH environment variable is not set" after 140 lines of traceback.
+requires-python = ">=3.10,<3.14"
 license = { text = "MIT" }
 dependencies = [
     "mujoco>=3.2,<3.4",
@@ -16,10 +19,12 @@ dependencies = [
     "interventionkit",
 ]
 
+# Nothing here is needed to run the environment, the expert or the attribution
+# study. Keeping them optional is what makes the base install small and fast.
 [project.optional-dependencies]
-train = ["torch>=2.2", "torchvision>=0.17"]
-viz = ["matplotlib>=3.7", "imageio>=2.31", "imageio-ffmpeg>=0.4"]
-teleop = ["pygame>=2.5"]
+train = ["torch>=2.2", "torchvision>=0.17"]   # policy learning only
+viz = ["matplotlib>=3.7", "imageio>=2.31"]     # figures and GIFs only
+teleop = ["pygame>=2.5"]                       # keyboard teleoperation only
 dev = ["pytest>=7.4", "pytest-timeout>=2.2", "ruff>=0.4"]
 
 [project.scripts]

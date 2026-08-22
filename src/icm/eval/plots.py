@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -84,26 +83,49 @@ def plot_misattribution_by_lag(summary_path: str | Path, out_path: str | Path) -
     return out
 
 
-def plot_matched_pair(summary_path: str | Path, out_path: str | Path) -> Path:
+def matched_pair_rates(run_dir: str | Path) -> dict[str, tuple[float, int]]:
+    """Symptom-phase misattribution for weak_grip and lift_slip, from the episodes.
+
+    Computed from the recorded run rather than read from a summary, and it
+    raises when the data is absent instead of substituting a remembered value.
+    A plotting helper that silently falls back to hard-coded numbers produces a
+    figure that looks like evidence and is not.
+    """
+    from interventionkit import RunReader
+
+    counts: dict[str, list[int]] = {"weak_grip": [], "lift_slip": []}
+    for ep in RunReader(run_dir).episodes():
+        gt = ep.ground_truth or {}
+        fault = gt.get("fault")
+        if fault not in counts or not ep.interventions or gt.get("root_phase") is None:
+            continue
+        if gt.get("symptom_phase") is None:
+            continue
+        counts[fault].append(int(int(gt["symptom_phase"]) != int(gt["root_phase"])))
+
+    missing = [k for k, v in counts.items() if not v]
+    if missing:
+        raise ValueError(f"run {run_dir} has no labelled episodes for: {missing}")
+    return {k: (float(np.mean(v)), len(v)) for k, v in counts.items()}
+
+
+def plot_matched_pair(run_dir: str | Path, out_path: str | Path) -> Path:
     """The two faults that look identical and are attributed oppositely."""
     plt = _plt()
-    report = json.loads(Path(summary_path).read_text())
-    per_fault = report.get("per_fault", {})
-    pair = ["weak_grip", "lift_slip"]
-    present = [f for f in pair if f in per_fault]
+    rates = matched_pair_rates(run_dir)
+    order = ["weak_grip", "lift_slip"]
+    labels = [f"weak_grip\ncause: grasp\n(n={rates['weak_grip'][1]})",
+              f"lift_slip\ncause: lift\n(n={rates['lift_slip'][1]})"]
+    values = [rates[k][0] for k in order]
 
-    fig, ax = plt.subplots(figsize=(4.4, 3.2))
-    labels = ["weak_grip\ncause: grasp", "lift_slip\ncause: lift"]
-    # Values come from the per-fault breakdown computed by the study runner.
-    values = [report.get("matched_pair", {}).get(f, float("nan")) for f in pair]
-    if not any(np.isfinite(values)):
-        values = [1.0, 0.0]  # documented study result; recomputed when present
-    ax.bar(labels[: len(values)], values, color=["#ef4444", "#22c55e"], width=0.55)
+    fig, ax = plt.subplots(figsize=(4.6, 3.4))
+    ax.bar(labels, values, color=["#ef4444", "#22c55e"], width=0.55)
     for i, v in enumerate(values):
-        ax.text(i, v + 0.03, f"{100 * v:.0f}%", ha="center", fontsize=10, weight="bold")
+        ax.text(i, v + 0.03, f"{100 * v:.0f}%", ha="center", fontsize=11, weight="bold")
     ax.set_ylabel("symptom-phase misattribution")
-    ax.set_ylim(0, 1.15)
-    ax.set_title("Identical symptom, opposite attribution", fontsize=9)
+    ax.set_ylim(0, 1.18)
+    ax.set_title("Identical failure, opposite attribution\n(both drop the object during the lift)",
+                 fontsize=9)
     fig.tight_layout()
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -183,6 +205,10 @@ def build_all(run_dir: str | Path, out_dir: str | Path = "docs/media") -> list[P
     made: list[Path] = []
     if (run_dir / "summary.json").is_file():
         made.append(plot_misattribution_by_lag(run_dir / "summary.json", out_dir / "misattribution.png"))
+        try:
+            made.append(plot_matched_pair(run_dir, out_dir / "matched_pair.png"))
+        except (ValueError, FileNotFoundError):
+            pass  # a sweep sub-run may not contain both faults
     if (run_dir / "sweep.json").is_file():
         made.append(plot_trace_sweep(run_dir / "sweep.json", out_dir / "trace_sweep.png"))
     if (run_dir / "degradation.json").is_file():

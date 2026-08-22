@@ -4,7 +4,13 @@
 # Full study:   make study
 # GPU pipeline: make demos && make train && make eval
 
-PY      ?= python3
+# MuJoCo publishes wheels for 3.10-3.13. Picking an interpreter in that range
+# automatically avoids a source build that fails with an opaque error - the most
+# common way a first install goes wrong.
+PY      ?= $(shell for v in python3.12 python3.11 python3.13 python3.10 python3; do \
+             command -v $$v >/dev/null 2>&1 && \
+             $$v -c 'import sys; raise SystemExit(0 if (3,10) <= sys.version_info < (3,14) else 1)' \
+             2>/dev/null && echo $$v && break; done)
 VENV    ?= .venv
 BIN     := $(VENV)/bin
 RUNS    ?= runs
@@ -21,17 +27,30 @@ help:
 	  awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 $(BIN)/python:
+	@if [ -z "$(PY)" ]; then \
+	  echo "No supported Python found (need 3.10-3.13; MuJoCo has no 3.14 wheel yet)."; \
+	  echo "  macOS : brew install python@3.12  then  make install PY=python3.12"; \
+	  echo "  Linux : sudo apt install python3.12-venv  then  make install PY=python3.12"; \
+	  exit 1; \
+	fi
+	@echo "Using $(PY) ($$($(PY) --version))"
 	$(PY) -m venv $(VENV)
 	$(BIN)/python -m pip install --upgrade pip wheel
 
 .PHONY: install
-install: $(BIN)/python ## Create a venv and install the project (CPU torch)
+install: $(BIN)/python ## Minimal install: environment, study and tests
 	$(BIN)/python -m pip install -e ./interventionkit
-	$(BIN)/python -m pip install -e ".[dev,viz]"
+	$(BIN)/python -m pip install -e ".[dev]"
 	@echo
-	@echo "Installed. PyTorch is NOT installed by default - it is ~2.5 GB."
-	@echo "  CPU only : make torch-cpu"
-	@echo "  NVIDIA   : make torch-cuda"
+	@echo "Installed. This is everything needed for 'make test' and 'make study'."
+	@echo "Optional, only when you need them:"
+	@echo "  make viz        figures and GIFs   (matplotlib, imageio)"
+	@echo "  make torch-cpu  policy training    (CPU, small download)"
+	@echo "  make torch-cuda policy training    (NVIDIA, ~2.5 GB - use wifi)"
+
+.PHONY: viz
+viz: ## Install plotting extras (only needed for figures and GIFs)
+	$(BIN)/python -m pip install -e ".[viz]"
 
 .PHONY: torch-cpu torch-cuda
 torch-cpu: ## Install CPU-only PyTorch (small download)

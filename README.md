@@ -103,20 +103,34 @@ scene + IK ──► scripted expert ──► fault injection ──► supervi
 
 ## Quick start
 
+**Requires Python 3.10–3.13.** MuJoCo publishes no wheel for 3.14 yet, so pip
+would try to build it from source and fail. `make` picks a suitable interpreter
+automatically if one is installed.
+
 ```bash
 git clone https://github.com/abyyworld/Interactive-correction-for-manipulation
 cd Interactive-correction-for-manipulation
-make install      # venv + project
+make install      # venv + project. numpy, mujoco, pytest. That is all.
 make assets       # Panda meshes, pinned commit, ~33 MB
 make test         # 71 tests
 make study        # the attribution study + an HTML report
 ```
 
-`make study` needs no GPU and no PyTorch — it renders no pixels. For the
-learning half:
+That is the whole minimum setup: **no GPU, no PyTorch, no plotting libraries**.
+The attribution study renders no pixels, so it runs on a laptop in a few
+minutes.
+
+Add the optional pieces only when you need them:
 
 ```bash
-make torch-cuda   # ~2.5 GB, do this on wifi
+make viz          # matplotlib + imageio, for figures and GIFs
+make torch-cpu    # policy training on CPU (small download)
+make torch-cuda   # policy training on NVIDIA (~2.5 GB, do this on wifi)
+```
+
+Then the learning half:
+
+```bash
 make demos EPISODES=800
 make train
 make eval

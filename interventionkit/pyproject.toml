@@ -7,7 +7,7 @@ name = "interventionkit"
 version = "0.1.0"
 description = "Record, index and analyse human interventions in agent rollouts"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 license = { text = "MIT" }
 keywords = ["imitation-learning", "dagger", "human-in-the-loop", "robotics", "agent-oversight"]
 classifiers = [
