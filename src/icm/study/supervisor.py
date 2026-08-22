@@ -266,7 +266,17 @@ class SyntheticSupervisor:
             attribution=attribution,
             confidence=confidence,
             notes=notes,
-            extra={"takeover_step": st.takeover_step, "detect_reason": st.detected.reason if st.detected else ""},
+            extra={
+                "takeover_step": st.takeover_step,
+                "detect_reason": st.detected.reason if st.detected else "",
+                # Phase at the moment the symptom became visible. Distinct from
+                # the phase at takeover: after a drop the tracker legitimately
+                # reverts to APPROACH, so by the time a human has reacted the
+                # robot no longer looks like it is in the phase where the failure
+                # appeared.
+                "detect_phase": int(st.detected.phase) if st.detected else -1,
+                "detect_step": st.detected.step if st.detected else -1,
+            },
         )
 
     def close(self) -> None:

@@ -49,6 +49,11 @@ class EnvConfig:
     cameras: tuple[str, ...] = ("wrist", "scene")
     use_depth: bool = True
     render_images: bool = True  # off => state-only, ~40x faster for study sweeps
+    #: Expose ground-truth object poses in the observation. Never used by a
+    #: camera-based policy, but it makes a state-based policy learnable, which is
+    #: what allows the credit-assignment experiment to run on CPU in minutes
+    #: instead of requiring the full image pipeline and a GPU.
+    include_privileged: bool = True
 
     # --- control ---
     control_hz: float = 20.0
@@ -482,6 +487,8 @@ class PickPlaceEnv:
 
     def observation(self) -> dict[str, Any]:
         obs: dict[str, Any] = {"proprio": self.proprio()}
+        if self.config.include_privileged:
+            obs["privileged"] = self.privileged_state()
         if self.rig is not None:
             obs.update(self.rig.render(self.data))
         return obs

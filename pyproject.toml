@@ -25,6 +25,7 @@ dev = ["pytest>=7.4", "pytest-timeout>=2.2", "ruff>=0.4"]
 [project.scripts]
 icm-collect = "icm.cli.collect:main"
 icm-teleop = "icm.cli.teleop:main"
+icm-report = "interventionkit.cli:report_main"
 icm-dagger = "icm.cli.dagger:main"
 icm-train = "icm.cli.train:main"
 icm-eval = "icm.cli.evaluate:main"

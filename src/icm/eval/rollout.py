@@ -71,6 +71,8 @@ class RolloutResult:
     intervened: bool = False
     takeover_step: int | None = None
     detect_reason: str = ""
+    detect_phase: int | None = None
+    detect_step: int | None = None
     attribution: int | None = None
     confidence: float | None = None
 
@@ -102,6 +104,7 @@ def rollout(
     seed: int | None = None,
     instruction: str | None = None,
     record_keys: tuple[str, ...] = ("proprio",),
+    record_agent_as: str = "policy",
     max_steps: int | None = None,
     render_camera: str | None = None,
     render_every: int = 1,
@@ -112,6 +115,11 @@ def rollout(
     ``supervisor_actor`` distinguishes a simulated supervisor ("expert") from a
     real person ("human") in the recorded data. Both count as interventions, but
     conflating them would let synthetic results be reported as human ones.
+
+    ``record_agent_as`` labels the agent's own steps. It is "policy" during
+    interactive collection, and "expert" when the agent *is* the scripted expert
+    generating demonstrations - otherwise the supervision rule that selects
+    corrective frames would discard every demonstration.
     """
     obs = env.reset(seed=seed, instruction=instruction)
     info = env.info_dict()
@@ -154,6 +162,10 @@ def rollout(
                 result.intervened = True
                 result.takeover_step = step
                 result.detect_reason = str(command.extra.get("detect_reason", ""))
+                dp = command.extra.get("detect_phase", -1)
+                ds = command.extra.get("detect_step", -1)
+                result.detect_phase = int(dp) if dp is not None and int(dp) >= 0 else None
+                result.detect_step = int(ds) if ds is not None and int(ds) >= 0 else None
                 # Fall back to suspending the fault here if the supervisor does
                 # not support the engage callback (e.g. a real teleop device).
                 if not engage_hook_installed and hasattr(agent, "on_supervisor_engage"):
@@ -163,7 +175,7 @@ def rollout(
                 result.confidence = command.confidence
         else:
             action = np.asarray(agent.act(env, obs, info, step), dtype=float)
-            actor = "policy"
+            actor = record_agent_as
 
         if recorder is not None:
             payload = {k: obs[k] for k in record_keys if k in obs}
@@ -199,7 +211,15 @@ def rollout(
     if result.takeover_step is not None:
         result.ground_truth["takeover_step"] = result.takeover_step
         result.ground_truth["detect_reason"] = result.detect_reason
+        result.ground_truth["symptom_phase"] = result.detect_phase
+        result.ground_truth["symptom_step"] = result.detect_step
 
     if recorder is not None:
-        recorder.finish(success=result.success, ground_truth=result.ground_truth)
+        # The phase timeline is what lets a credit-assignment strategy rewind to
+        # "the start of the phase the supervisor blamed" after the fact.
+        recorder.finish(
+            success=result.success,
+            ground_truth=result.ground_truth,
+            extra={"phase_timeline": [int(p) for p in result.phases]},
+        )
     return result

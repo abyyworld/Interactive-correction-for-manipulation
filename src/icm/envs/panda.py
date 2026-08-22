@@ -166,26 +166,49 @@ class PandaRobot:
         seed_qpos: np.ndarray | None = None,
         **kwargs,
     ):
-        """Solve IK from ``seed_qpos`` (default: current pose) without touching sim state."""
+        """Solve IK from ``seed_qpos`` (default: current pose) without touching sim state.
+
+        Retries once from the home posture if the first attempt fails to converge.
+        """
         from ..control.ik import solve_ik as _solve
 
-        self._ik_data.qpos[:] = self.data.qpos
-        self._ik_data.qvel[:] = 0.0
-        if seed_qpos is not None:
-            self._ik_data.qpos[self.arm_qpos_adr] = seed_qpos
-
         kwargs.setdefault("rest_qpos", HOME_ARM_QPOS)
-        return _solve(
-            self.model,
-            self._ik_data,
-            self.tcp_site_id,
-            np.asarray(target_pos, dtype=float),
-            None if target_quat is None else np.asarray(target_quat, dtype=float),
-            dof_indices=self.arm_dof_adr,
-            qpos_indices=self.arm_qpos_adr,
-            joint_indices=self.arm_joint_ids,
-            **kwargs,
-        )
+        target_pos = np.asarray(target_pos, dtype=float)
+        target_quat = None if target_quat is None else np.asarray(target_quat, dtype=float)
+
+        def attempt(seed: np.ndarray | None):
+            self._ik_data.qpos[:] = self.data.qpos
+            self._ik_data.qvel[:] = 0.0
+            if seed is not None:
+                self._ik_data.qpos[self.arm_qpos_adr] = seed
+            return _solve(
+                self.model,
+                self._ik_data,
+                self.tcp_site_id,
+                target_pos,
+                target_quat,
+                dof_indices=self.arm_dof_adr,
+                qpos_indices=self.arm_qpos_adr,
+                joint_indices=self.arm_joint_ids,
+                **kwargs,
+            )
+
+        result = attempt(seed_qpos)
+        if result.converged:
+            return result
+
+        # Retry from the home posture. Damped least squares is a local method, so
+        # convergence depends on the seed: started from a degenerate configuration
+        # (several joints pinned at their limits, as after a bare mj_resetData) it
+        # gets stuck in a local minimum on targets it solves easily from a sane
+        # posture. One deterministic restart removes that failure mode without
+        # making callers responsible for choosing a good seed.
+        if seed_qpos is None or not np.allclose(seed_qpos, HOME_ARM_QPOS):
+            retry = attempt(HOME_ARM_QPOS)
+            if retry.converged:
+                return retry
+            return retry if retry.pos_err < result.pos_err else result
+        return result
 
     def ready_qpos(self, tcp_pos: np.ndarray | None = None, yaw: float = 0.0) -> np.ndarray:
         """Arm configuration for the episode start pose."""
