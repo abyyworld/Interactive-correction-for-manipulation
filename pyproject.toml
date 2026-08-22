@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "icm"
+version = "0.1.0"
+description = "Interactive correction for manipulation: human-gated intervention learning with error-attribution analysis"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "mujoco>=3.2,<3.4",
+    "numpy>=1.24,<3",
+    "pyyaml>=6.0",
+    "interventionkit",
+]
+
+[project.optional-dependencies]
+train = ["torch>=2.2", "torchvision>=0.17"]
+viz = ["matplotlib>=3.7", "imageio>=2.31", "imageio-ffmpeg>=0.4"]
+teleop = ["pygame>=2.5"]
+dev = ["pytest>=7.4", "pytest-timeout>=2.2", "ruff>=0.4"]
+
+[project.scripts]
+icm-collect = "icm.cli.collect:main"
+icm-teleop = "icm.cli.teleop:main"
+icm-dagger = "icm.cli.dagger:main"
+icm-train = "icm.cli.train:main"
+icm-eval = "icm.cli.evaluate:main"
+icm-study = "icm.cli.study:main"
+icm-assets = "icm.envs.assets.fetch:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"icm.envs.assets" = ["*.xml", "**/*.xml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "interventionkit/tests"]
+timeout = 300
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "B008"]

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Vendored robot meshes (fetched by `make assets`, pinned in fetch.py)
+src/icm/envs/assets/menagerie/
+
+# Run outputs
+runs/
+data/
+outputs/
+*.ckpt
+*.pt
+wandb/
+
+# OS
+.DS_Store
