@@ -60,11 +60,14 @@ jobs:
       - name: Install only interventionkit
         run: |
           python -m pip install --upgrade pip
-          pip install ./interventionkit pytest
+          pip install ./interventionkit pytest pytest-timeout
       - name: Confirm it has no heavy dependencies
         run: |
           python -c "import interventionkit, sys; assert 'torch' not in sys.modules and 'mujoco' not in sys.modules; print(interventionkit.__version__)"
           ! pip show mujoco 2>/dev/null
           ! pip show torch 2>/dev/null
+      # Run from inside the package so the parent repo's pytest configuration
+      # cannot apply: this job exists to prove the package stands alone.
       - name: Test
-        run: pytest interventionkit/tests -q
+        working-directory: interventionkit
+        run: pytest tests -q

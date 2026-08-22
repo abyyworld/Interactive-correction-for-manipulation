@@ -219,11 +219,20 @@ Stated plainly, because the difference matters:
 2. **The agent under supervision is a scripted expert with an injected fault**,
    standing in for a policy with a systematic error, because its failure mode is
    known exactly. A learned policy fails in messier ways.
-3. **Behaviour cloning from ~200 demonstrations does not solve this task.**
-   Prediction error is good (0.078 mean L1, better than a 1-NN bound of 0.116)
-   but execution compounds error and success stays low. This is the well-known
-   BC distribution-shift problem, and it is the reason interactive correction
-   exists — but it does mean absolute policy numbers here are weak.
+3. **Behaviour cloning alone does not solve this task**, at 200 or 800
+   demonstrations. Not for lack of fit: the policy predicts the expert's action
+   to 0.052 mean L1, better than a 1-nearest-neighbour bound of 0.116. The
+   failure is distribution shift, and it is measurable directly:
+
+   | states the error is measured on | mean action L1 |
+   |---|---|
+   | states the **expert** visits (the training distribution) | **0.052** |
+   | states the **policy** visits when driving | **0.239** (4.6×) |
+
+   A policy that fits its training data well and is 4.6× worse wherever it
+   actually goes is the textbook case for interactive correction — which is what
+   this project is about — but it does mean the absolute policy numbers here are
+   weak, and they are reported as such rather than tuned until they look good.
 4. **Simulation only.** No real robot, no sim-to-real claim.
 5. **Language conditioning is templated**, not free-form.
 
