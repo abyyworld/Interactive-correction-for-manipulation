@@ -158,6 +158,8 @@ class PickPlaceEnv:
         self._orig_gripper_forcerange = self.model.actuator_forcerange[
             self.robot.gripper_actuator_id
         ].copy()
+        self._grasp_latched = False
+        self._no_contact_steps = 0
         self._substeps = cfg.substeps()
         self._step_count = 0
         self._target_pos = np.zeros(3)
@@ -248,6 +250,8 @@ class PickPlaceEnv:
         self._target_quat = self.robot.tcp_quat.copy()
         self._gripper_cmd = 1.0
         self._step_count = 0
+        self._grasp_latched = False
+        self._no_contact_steps = 0
         self.tracker.reset()
         self._instruction = instruction if instruction is not None else self.default_instruction()
         self._last_info = self._compute_info()
@@ -334,14 +338,29 @@ class PickPlaceEnv:
         dof = self._obj_dofadr[name]
         return float(np.linalg.norm(self.data.qvel[dof : dof + 3]))
 
+    #: Consecutive contact-free control steps before a held object counts as
+    #: released. Contact detection flickers: during the acceleration of a lift a
+    #: finger momentarily separates, and the raw signal reads 0 for a single step
+    #: while the cube is plainly still held. Measured on a healthy episode, three
+    #: such dropouts occur per lift. Unfiltered they corrupt the phase label
+    #: (LIFT briefly becomes APPROACH) and make any "object dropped" detector
+    #: fire on perfectly good episodes.
+    GRASP_RELEASE_STEPS = 3
+
     def is_grasped(self, name: str | None = None) -> bool:
-        """True when both fingers are in contact with the object.
+        """True when the object is held. Debounced for the target object.
 
         Contact-based rather than width-based: a width threshold cannot tell
         "holding the cube" from "closed on empty air next to the cube", and that
         distinction is the difference between a successful grasp and the most
         common failure mode.
         """
+        if name is None or name == self.target_name:
+            return self._grasp_latched
+        return self.contact_grasp(name)
+
+    def contact_grasp(self, name: str | None = None) -> bool:
+        """Raw, unfiltered contact test: both fingers touching ``name``."""
         name = name or self.target_name
         body = self._obj_body[name]
         left = right = False
@@ -363,9 +382,39 @@ class PickPlaceEnv:
                 return True
         return False
 
+    def geometric_hold(self, name: str | None = None) -> bool:
+        """Whether the fingers are closed *on the object* rather than on air.
+
+        Contact detection alone proved unreliable: MuJoCo drops finger contacts
+        for several consecutive steps under lift acceleration even while the cube
+        is plainly held (observed with gripper width 0.042 m on a 0.042 m cube,
+        object rising, contacts reporting nothing). This geometric test is the
+        complement - the finger separation matches the object width and the
+        object sits between the fingertips - and it cannot be fooled by the
+        common failure it needs to exclude: closing on empty air drives the width
+        to ~0, which does not match the object width at all.
+        """
+        name = name or self.target_name
+        spec = next(s for s in self.object_specs if s.name == name)
+        width_matches = abs(self.robot.gripper_width - 2.0 * spec.half) < 0.008
+        if not width_matches:
+            return False
+        return float(np.linalg.norm(self.object_pos(name) - self.robot.tcp_pos)) < 0.05
+
+    def _update_grasp_latch(self) -> bool:
+        raw = self.contact_grasp() or self.geometric_hold()
+        if raw:
+            self._no_contact_steps = 0
+        else:
+            self._no_contact_steps += 1
+        self._grasp_latched = raw or (
+            self._grasp_latched and self._no_contact_steps < self.GRASP_RELEASE_STEPS
+        )
+        return self._grasp_latched
+
     def _compute_info(self) -> EpisodeInfo:
         obj = self.object_pos()
-        grasped = self.is_grasped()
+        grasped = self._update_grasp_latch()
         phase = self.tracker.update(
             PhaseInputs(
                 tcp_pos=tuple(self.robot.tcp_pos),
@@ -458,6 +507,8 @@ class PickPlaceEnv:
             "yaw": float(getattr(self, "_yaw", 0.0)),
             "gripper_cmd": float(self._gripper_cmd),
             "step_count": int(self._step_count),
+            "grasp_latched": bool(self._grasp_latched),
+            "no_contact_steps": int(self._no_contact_steps),
             "tracker": {
                 "phase": int(self.tracker.phase),
                 "ever_grasped": self.tracker.ever_grasped,
@@ -478,6 +529,8 @@ class PickPlaceEnv:
         self._yaw = float(state.get("yaw", 0.0))
         self._gripper_cmd = float(state["gripper_cmd"])
         self._step_count = int(state["step_count"])
+        self._grasp_latched = bool(state.get("grasp_latched", False))
+        self._no_contact_steps = int(state.get("no_contact_steps", 0))
         self._instruction = state.get("instruction", self._instruction)
         tr = state["tracker"]
         self.tracker.reset()

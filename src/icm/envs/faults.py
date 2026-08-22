@@ -15,8 +15,8 @@ The delayed-consequence faults are the point
 --------------------------------------------
 Faults are grouped by how far the symptom is from the cause:
 
-* ``GRASP_OFFSET``   cause APPROACH -> symptom LIFT   (the grasp looks fine until
-                     the object slips out on the way up)
+* ``GRASP_OFFSET``   cause APPROACH -> symptom LIFT   (the fingers close beside
+                     the cube; nothing looks wrong until the arm rises empty)
 * ``WRONG_OBJECT``   cause APPROACH -> symptom PLACE  (everything executes
                      perfectly, on the wrong block)
 * ``WEAK_GRIP``      cause GRASP    -> symptom LIFT
@@ -131,9 +131,14 @@ class FaultInjector:
     consequence to misattribute.
     """
 
-    #: Metres of lateral grasp offset at severity 1.0. Sized against the 4.2 cm
-    #: cube and 8 cm gripper: enough that the grasp is unreliable, not so much
-    #: that the gripper visibly misses and the cause becomes obvious.
+    #: Metres of lateral grasp offset at severity 1.0, against a 4.2 cm cube.
+    #: A severity sweep showed the transition is sharp: below ~20 mm the grasp
+    #: still succeeds, above ~30 mm it misses entirely, and the intermediate
+    #: band that grasps-then-slips is too narrow (2-4 episodes in 20) to build
+    #: an experiment on. So this fault is a clean miss, and its delay comes from
+    #: *observability* rather than from physics: the fingers closing beside the
+    #: cube is easy to miss, and the failure becomes obvious only when the arm
+    #: lifts away empty, one phase later.
     MAX_GRASP_OFFSET = 0.034
     #: Weak grip is modelled as a reduced gripper *force limit*, not a wider
     #: finger opening. Commanding a narrower opening actually grips a cube
@@ -151,12 +156,29 @@ class FaultInjector:
         self.spec = spec or FaultSpec()
         self.rng = rng or np.random.default_rng(0)
         self.state = FaultState()
-        self._drift_dir = np.zeros(3)
         self._target_override: str | None = None
+        self.suspended = False
+
+    def suspend(self, env) -> None:
+        """Disable the fault, called when a supervisor takes control.
+
+        A fault models *the agent's* erroneous behaviour, not a broken robot. If
+        it persisted through a takeover, the human's correction would fail too
+        and the correction data would be worthless - you would be measuring an
+        unfixable robot rather than a fixable policy. Action-level faults simply
+        stop being applied; the weak-grip fault additionally restores the gripper
+        force limit it lowered.
+        """
+        self.suspended = True
+        if self.spec.type is FaultType.WEAK_GRIP:
+            env.model.actuator_forcerange[env.robot.gripper_actuator_id] = (
+                env._orig_gripper_forcerange
+            )
 
     def reset(self, env, expert: ScriptedExpert) -> None:
         self.state = FaultState()
         self._target_override = None
+        self.suspended = False
         spec = self.spec
         if spec.type is FaultType.NONE:
             return
@@ -199,7 +221,7 @@ class FaultInjector:
     def modify(self, env, expert: ScriptedExpert, action: np.ndarray, step: int) -> np.ndarray:
         """Adjust the expert's action for stage-triggered faults."""
         spec = self.spec
-        if spec.type is FaultType.NONE:
+        if spec.type is FaultType.NONE or self.suspended:
             return action
         action = np.array(action, dtype=float)
 

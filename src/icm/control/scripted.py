@@ -122,6 +122,25 @@ class ScriptedExpert:
         self.gripper_close_value = -1.0
         self.target_name: str | None = None
 
+    def resume_from_state(self, env, target_name: str | None = None) -> None:
+        """Start from the stage that matches the current world state.
+
+        Used when a supervisor takes control mid-episode. Calling ``reset``
+        instead would begin at HOVER with the gripper commanded *open*, which
+        drops whatever the robot is currently holding - turning a takeover on a
+        healthy episode into a failure the supervisor itself caused. A person
+        taking the controls continues from where things actually are.
+        """
+        self.reset(target_name)
+        if env.is_grasped(self.target_name or env.target_name):
+            self.gripper_close_value = -1.0
+            obj_z = env.object_pos(self.target_name or env.target_name)[2]
+            self.state.stage = (
+                Stage.LIFT if obj_z < self.config.lift_height * 0.8 else Stage.TRANSPORT
+            )
+        else:
+            self.state.stage = Stage.HOVER
+
     def reset(self, target_name: str | None = None) -> None:
         self.state = ExpertState()
         self.grasp_offset = np.zeros(3)
