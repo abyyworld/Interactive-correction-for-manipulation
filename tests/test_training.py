@@ -260,6 +260,7 @@ def test_per_root_cap_is_applied_per_source(run_dir, tmp_path):
     assert counts[second.name] == counts_uncapped[second.name], "second root untouched"
 
 
+@requires_torch  # imports icm.study.degradation, which reaches train_bc and torch
 def test_shared_demo_pool_reaches_the_training_subprocess(run_dir, tmp_path, monkeypatch):
     """The shared-demo control must actually be passed to the trainer.
 
