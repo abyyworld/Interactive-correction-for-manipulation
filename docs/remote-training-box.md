@@ -273,3 +273,25 @@ Pull rendered evaluation GIFs back to look at:
 ```bash
 rsync -avP gpubox:~/Interactive-correction-for-manipulation/runs/<run_id>/media/ ./media/
 ```
+
+
+---
+
+## General-purpose remote access
+
+Beyond running this project, the same Tailscale network supports everything else
+you might want the GPU box for.
+
+| need | tool |
+|---|---|
+| terminal, editing, running code | SSH + VS Code "Remote - SSH" |
+| the full desktop (browser, GUI apps) | RustDesk — free, works on Windows Home, and its Privacy Mode blanks the physical screen and blocks the local keyboard while you are connected |
+| moving files | `tailscale file cp <file> <host>:` (Taildrop), or `scp`, or `rsync -avP` to pull results back resumably |
+| a single Linux GUI window | `ssh -X` forwards it to the local display |
+
+Windows Remote Desktop is the natural choice if the machine runs Windows
+**Pro** — it locks the console automatically when you connect. It is absent from
+Windows Home, which is why RustDesk is the recommendation here.
+
+Pressing `Win+L` before leaving the machine keeps SSH sessions and training runs
+alive while showing only a lock screen to anyone standing at it.

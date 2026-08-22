@@ -112,7 +112,7 @@ git clone https://github.com/abyyworld/Interactive-correction-for-manipulation
 cd Interactive-correction-for-manipulation
 make install      # venv + project. numpy, mujoco, pytest. That is all.
 make assets       # Panda meshes, pinned commit, ~33 MB
-make test         # 71 tests
+make test         # 73 tests
 make study        # the attribution study + an HTML report
 ```
 

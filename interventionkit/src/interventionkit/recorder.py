@@ -108,6 +108,10 @@ class EpisodeRecorder:
             seg.notes = notes
 
     @property
+    def episode_id(self) -> str:
+        return self._w.episode_id
+
+    @property
     def interventions(self) -> list[InterventionSegment]:
         return list(self._segments)
 
