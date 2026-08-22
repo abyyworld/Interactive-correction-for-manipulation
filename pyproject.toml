@@ -44,6 +44,10 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "interventionkit/tests"]
+# The test modules import `tests.conftest` for shared markers, which needs the
+# repository root importable. `python -m pytest` adds it implicitly and a bare
+# `pytest` does not, so without this the suite passes locally and fails in CI.
+pythonpath = ["."]
 timeout = 300
 filterwarnings = ["ignore::DeprecationWarning"]
 

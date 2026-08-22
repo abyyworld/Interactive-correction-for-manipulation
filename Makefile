@@ -64,7 +64,7 @@ assets: ## Fetch the Franka Panda meshes at the pinned commit (~33 MB)
 
 .PHONY: test
 test: ## Run the full test suite
-	$(BIN)/python -m pytest -q
+	$(BIN)/pytest -q
 
 .PHONY: lint
 lint: ## Check formatting and lint
