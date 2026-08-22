@@ -34,6 +34,10 @@ that caused it:
 | `lift_slip` | lift → lift | **0.0%** | 9.9 steps |
 | `weak_grip` | grasp → lift | **100.0%** | 23.7 steps |
 
+<p align="center">
+  <img src="docs/media/matched_pair.png" alt="weak_grip vs lift_slip misattribution" width="380">
+</p>
+
 These two produce *visually identical* failures — the object falls out during
 the lift. Only the true cause differs, so the gap cannot be explained by the
 failures looking different. n=36 each.

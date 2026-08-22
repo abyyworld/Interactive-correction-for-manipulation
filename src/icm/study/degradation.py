@@ -41,7 +41,7 @@ from ..eval.metrics import evaluate_agent
 from ..eval.rollout import ScriptedAgent
 from ..policies.runner import PolicyAgent, RunnerConfig
 from ..study.supervisor import SupervisorConfig, SyntheticSupervisor
-from ..training.dagger import collect_round
+from ..training.dagger import PHASE_NAMES, collect_round
 from ..training.dataset import DatasetConfig, InterventionDataset
 from ..training.train_bc import TrainConfig, load_policy
 from ..training.weighting import CreditAssignment
@@ -61,6 +61,18 @@ class DegradationConfig:
     faults: tuple[FaultType, ...] = DELAYED_FAULTS + IMMEDIATE_FAULTS
     severity_range: tuple[float, float] = (0.8, 1.0)
     equalise_frames: bool = True
+    #: When > 0, collect this many fault-free expert demonstrations once and add
+    #: them, unchanged, to every condition's training set.
+    #:
+    #: This is the control for the confound the first run exposed. Rewinding
+    #: changes *where the corrective demonstration starts*, and by the time a
+    #: supervisor reacts the world has usually settled back into APPROACH - so
+    #: the shallowest rewind incidentally supplies the best coverage of the state
+    #: distribution every evaluation episode begins in. That coverage effect
+    #: swamped the attribution effect. Giving every condition an identical demo
+    #: pool holds coverage constant, leaving the placement of the corrective
+    #: states as the only thing that varies.
+    shared_demo_episodes: int = 0
     seed: int = 0
     state_key: str = "privileged"
     train: TrainConfig = field(
@@ -93,6 +105,17 @@ def run_degradation_experiment(
     env = PickPlaceEnv(EnvConfig(render_images=False), seed=cfg.seed)
     expert_cfg = ExpertConfig()
 
+    shared_demos: Path | None = None
+    if cfg.shared_demo_episodes > 0:
+        shared_demos = out_root / "data_shared_demos"
+        if not (shared_demos / "run.json").is_file():
+            if progress:
+                print(
+                    f"[demos] collecting {cfg.shared_demo_episodes} fault-free demonstrations",
+                    flush=True,
+                )
+            _collect_demos(env, shared_demos, cfg, expert_cfg)
+
     # Identical episodes across conditions: same seeds, same faults, same
     # supervisor draw. Only the rewind target changes.
     def make_agent_factory(round_seed: int):
@@ -105,6 +128,18 @@ def run_degradation_experiment(
 
     collected: dict[str, tuple[Path, Any]] = {}
     for strategy in cfg.strategies:
+        # Reuse an existing collection rather than duplicating it. Collection is
+        # the slowest stage and is fully determined by the seed, so re-running it
+        # would produce identical episodes at real cost - and appending into the
+        # same directory would silently double every dataset.
+        existing = out_root / f"data_{strategy.value}"
+        if (existing / "run.json").is_file():
+            summary_path = existing / "collection.json"
+            saved = json.loads(summary_path.read_text()) if summary_path.is_file() else {}
+            if progress:
+                print(f"[collect] {strategy.value}: reusing {existing}", flush=True)
+            collected[strategy.value] = (existing, _ReusedCollection(saved))
+            continue
         if progress:
             print(f"[collect] {strategy.value}", flush=True)
         supervisor = SyntheticSupervisor(
@@ -160,8 +195,14 @@ def run_degradation_experiment(
             frames_used = sizes[name]
 
         if progress:
-            print(f"[train] {name} on {frames_used} frames", flush=True)
-        train_summary = _train_with_budget(path, run_dir, dcfg, cfg, budget)
+            print(
+                f"[train] {name} on {frames_used} correction frames"
+                + (" + shared demos" if shared_demos else ""),
+                flush=True,
+            )
+        train_summary = _train_with_budget(
+            path, run_dir, dcfg, cfg, budget, shared_demos=shared_demos
+        )
 
         policy = load_policy(run_dir / "checkpoint.pt", device=cfg.train.resolve_device())
         agent = PolicyAgent(
@@ -187,7 +228,44 @@ def run_degradation_experiment(
     return report
 
 
-def _train_with_budget(data_path, run_dir, dcfg, cfg, budget):
+class _ReusedCollection:
+    """Stands in for a CollectionSummary when a prior collection is reused."""
+
+    def __init__(self, saved: dict[str, Any]):
+        self._saved = saved
+
+    def to_dict(self) -> dict[str, Any]:
+        return {**self._saved, "reused": True}
+
+
+def _collect_demos(env, out_dir: Path, cfg, expert_cfg) -> Path:
+    """Fault-free expert demonstrations, shared unchanged by every condition."""
+    from interventionkit import InterventionRecorder
+
+    from ..eval.rollout import rollout
+
+    recorder = InterventionRecorder(
+        out_dir,
+        task="pick_place",
+        phase_names=PHASE_NAMES,
+        config={"source": "scripted_expert", "role": "shared coverage pool"},
+    )
+    agent = ScriptedAgent(ScriptedExpert(expert_cfg))
+    for i in range(cfg.shared_demo_episodes):
+        seed = 500_000 + cfg.seed * 1000 + i
+        with recorder.episode(seed=seed, instruction=env.default_instruction()) as ep:
+            rollout(
+                env,
+                agent,
+                recorder=ep,
+                seed=seed,
+                record_keys=("proprio", "privileged"),
+                record_agent_as="expert",
+            )
+    return out_dir
+
+
+def _train_with_budget(data_path, run_dir, dcfg, cfg, budget, shared_demos=None):
     """Train in a subprocess.
 
     Training deliberately runs in a process that never imports MuJoCo. Besides
@@ -236,7 +314,12 @@ def _train_with_budget(data_path, run_dir, dcfg, cfg, budget):
         str(cfg.train.checkpoint_every),
         "--quiet",
     ]
-    if budget is not None:
+    if shared_demos is not None:
+        # Cap only the corrections; the demo pool is identical everywhere by
+        # design, so capping it too would reintroduce the difference being
+        # controlled for.
+        cmd += ["--cap-per-root", str(budget if budget is not None else -1), "-1"]
+    elif budget is not None:
         cmd += ["--subsample", str(budget)]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:

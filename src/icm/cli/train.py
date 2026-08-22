@@ -54,7 +54,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--subsample",
         type=int,
         default=0,
-        help="cap training frames, for size-controlled comparisons (0 = all)",
+        help="cap total training frames, for size-controlled comparisons (0 = all)",
+    )
+    ap.add_argument(
+        "--cap-per-root",
+        type=int,
+        nargs="*",
+        default=None,
+        help="cap frames contributed by each data root, in the order given; "
+        "-1 means no cap on that root. Lets one source be held fixed while "
+        "another is matched in size.",
     )
     ap.add_argument("--val-fraction", type=float, default=0.1)
     ap.add_argument("--log-every", type=int, default=50)
@@ -96,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         image_keys=tuple(args.images),
         state_key=args.state_key,
         vocab=vocab,
+        frame_cap_per_root=tuple((c if c >= 0 else 10**9) for c in (args.cap_per_root or ())),
     )
     pcfg = PolicyConfig(
         chunk=args.chunk,

@@ -52,6 +52,11 @@ class DatasetConfig:
     state_only_cache_size: int = 512
     correction_weight: float = 1.0
     demo_weight: float = 1.0
+    #: Per-root frame cap, aligned with ``roots``. Lets one source be held fixed
+    #: while another is matched in size - the control needed to separate "which
+    #: states were corrected" from "how much data there was", when the two
+    #: sources play different roles.
+    frame_cap_per_root: tuple[int, ...] = ()
     #: Closed vocabulary for language conditioning. Empty disables it. When set,
     #: each frame carries its episode's instruction encoded as a bag of words.
     vocab: tuple[str, ...] = ()
@@ -131,6 +136,23 @@ class InterventionDataset:
                         weight = cfg.correction_weight if in_correction else cfg.demo_weight
                     self.samples.append((ri, meta.episode_id, t, weight))
 
+        if cfg.frame_cap_per_root:
+            self._apply_per_root_caps()
+
+    def _apply_per_root_caps(self) -> None:
+        """Trim each root's contribution to its cap, deterministically."""
+        caps = self.config.frame_cap_per_root
+        rng = np.random.default_rng(0)
+        kept: list[tuple[int, str, int, float]] = []
+        for ri in range(len(self.readers)):
+            rows = [s for s in self.samples if s[0] == ri]
+            cap = caps[ri] if ri < len(caps) else None
+            if cap is not None and 0 <= cap < len(rows):
+                idx = sorted(rng.choice(len(rows), size=cap, replace=False))
+                rows = [rows[i] for i in idx]
+            kept.extend(rows)
+        self.samples = kept
+
     def __len__(self) -> int:
         return len(self.samples)
 
@@ -199,8 +221,13 @@ class InterventionDataset:
 
     def summary(self) -> dict[str, Any]:
         eps = {(ri, e) for ri, e, _, _ in self.samples}
+        per_root: dict[str, int] = {}
+        for ri, _, _, _ in self.samples:
+            key = str(self.readers[ri].root.name)
+            per_root[key] = per_root.get(key, 0) + 1
         return {
             "frames": len(self.samples),
+            "frames_per_root": per_root,
             "episodes_contributing": len(eps),
             "runs": len(self.readers),
             "credit": self.config.credit.value,

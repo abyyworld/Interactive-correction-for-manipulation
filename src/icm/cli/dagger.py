@@ -17,6 +17,14 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument(
         "--no-equalise", action="store_true", help="do not match dataset sizes across strategies"
     )
+    ap.add_argument(
+        "--shared-demos",
+        type=int,
+        default=0,
+        help="add this many fault-free demonstrations to every condition, holding "
+        "initial-state coverage constant so that only the placement of the "
+        "corrective states differs between strategies",
+    )
     ap.add_argument("--device", default="auto")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--quiet", action="store_true")
@@ -36,6 +44,7 @@ def main(argv: list[str] | None = None) -> int:
         eval_episodes=args.eval,
         trace_accuracy=args.trace_accuracy,
         equalise_frames=not args.no_equalise,
+        shared_demo_episodes=args.shared_demos,
         seed=args.seed,
         train=TrainConfig(
             steps=args.steps,
