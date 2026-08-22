@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "interventionkit"
+version = "0.1.0"
+description = "Record, index and analyse human interventions in agent rollouts"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["imitation-learning", "dagger", "human-in-the-loop", "robotics", "agent-oversight"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# numpy only, on purpose: this must install cleanly next to any RL/robotics stack
+# without dragging in a plotting or dataframe dependency.
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "ruff>=0.4"]
+
+[project.scripts]
+ik-report = "interventionkit.cli:report_main"
+ik-inspect = "interventionkit.cli:inspect_main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
