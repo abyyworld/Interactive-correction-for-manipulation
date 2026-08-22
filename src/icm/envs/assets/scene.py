@@ -98,6 +98,10 @@ class SceneSpec:
     wrist_cam_up: tuple[float, float, float] = (0.0, -1.0, 0.0)
     extra_worldbody: str = ""
     include_goal_pad: bool = True
+    #: Compensate gravity on the robot links (not the objects). A real Franka
+    #: does this inside its own controller, so enabling it matches the hardware
+    #: rather than making the task easier.
+    gravity_compensation: bool = True
     _panda_xml: Path | None = field(default=None, repr=False)
 
 
@@ -326,5 +330,22 @@ def build_model(spec: SceneSpec | None = None):
     tcp.size = np.array([0.005, 0.005, 0.005])
     tcp.rgba = np.array([1.0, 0.2, 0.2, 0.0])  # invisible; used for kinematics only
 
+    if spec.gravity_compensation:
+        # Must happen before compile: MuJoCo counts gravity-compensated bodies at
+        # compile time (``ngravcomp``) and skips the computation entirely when
+        # that count is zero. Writing ``model.body_gravcomp`` on an already
+        # compiled model silently does nothing - the field changes, the force
+        # never appears.
+        for body in _iter_bodies(mj_spec.worldbody):
+            if body.name.startswith("link") or body.name in ("hand", "left_finger", "right_finger"):
+                body.gravcomp = 1.0
+
     model = mj_spec.compile()
     return model, xml
+
+
+def _iter_bodies(body):
+    """Depth-first walk over an MjSpec body tree."""
+    for child in body.bodies:
+        yield child
+        yield from _iter_bodies(child)
