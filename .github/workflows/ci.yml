@@ -9,6 +9,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Both ends of the supported MuJoCo range. The MjSpec body accessor was
+        # renamed between them (find_body -> body), which installed fine and then
+        # failed at the first environment construction - exactly the failure a
+        # single-version CI cannot catch.
+        include:
+          - mujoco: "3.2.7"
+            torch: true
+          - mujoco: "3.3.7"
+            torch: false   # also proves the base install runs without PyTorch
     steps:
       - uses: actions/checkout@v4
 
@@ -34,7 +46,11 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install -e ./interventionkit
           pip install -e ".[dev]"
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "mujoco==${{ matrix.mujoco }}"
+
+      - name: Install PyTorch
+        if: matrix.torch
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: Fetch assets
         run: python -m icm.envs.assets.fetch

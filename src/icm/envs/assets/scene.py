@@ -301,6 +301,12 @@ def build_scene_xml(spec: SceneSpec | None = None) -> str:
 </mujoco>"""
 
 
+def _mujoco_version() -> str:
+    import mujoco
+
+    return getattr(mujoco, "__version__", "unknown")
+
+
 def build_model(spec: SceneSpec | None = None):
     """Compile the scene and return ``(mujoco.MjModel, xml_string)``.
 
@@ -319,10 +325,13 @@ def build_model(spec: SceneSpec | None = None):
     except ValueError as exc:  # surface the offending XML, MuJoCo errors are terse
         raise ValueError(f"failed to parse scene MJCF: {exc}") from exc
 
-    hand = mj_spec.find_body("hand")
+    hand = find_spec_body(mj_spec, "hand")
     if hand is None:
         raise RuntimeError(
-            "Panda 'hand' body not found - the pinned Menagerie assets may have changed shape."
+            "Panda 'hand' body not found - the pinned Menagerie assets may have changed "
+            f"shape, or this MuJoCo version ({_mujoco_version()}) exposes MjSpec bodies "
+            "differently. Bodies present: "
+            + ", ".join(sorted(getattr(b, "name", "?") for b in getattr(mj_spec, "bodies", [])))
         )
     cam = hand.add_camera()
     cam.name = "wrist"
@@ -350,6 +359,33 @@ def build_model(spec: SceneSpec | None = None):
 
     model = mj_spec.compile()
     return model, xml
+
+
+def find_spec_body(mj_spec, name: str):
+    """Look up a body in an ``MjSpec`` across MuJoCo versions.
+
+    The accessor was renamed: ``MjSpec.find_body(name)`` in 3.2.x became
+    ``MjSpec.body(name)`` in 3.3.x. Supporting a range of MuJoCo versions in
+    pyproject while calling only one of these means the package installs happily
+    and then fails at the first environment construction - which is exactly what
+    happened on a machine that resolved 3.3.7 instead of the 3.2.7 used during
+    development. Iterating ``spec.bodies`` is the final fallback and works on
+    every version.
+    """
+    for accessor in ("body", "find_body"):
+        fn = getattr(mj_spec, accessor, None)
+        if fn is None:
+            continue
+        try:
+            found = fn(name)
+        except (KeyError, ValueError, TypeError):
+            continue
+        if found is not None:
+            return found
+    for body in getattr(mj_spec, "bodies", []):
+        if getattr(body, "name", None) == name:
+            return body
+    return None
 
 
 def _iter_bodies(body):

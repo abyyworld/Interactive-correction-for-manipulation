@@ -8,6 +8,7 @@ also how the real pipeline runs it.
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 
@@ -18,6 +19,15 @@ from icm.training.weighting import CreditAssignment, corrected_span
 from interventionkit import InterventionRecorder
 
 PHASES = ("approach", "grasp", "lift", "place")
+
+#: PyTorch is an optional extra ("make torch-cpu"), because the environment, the
+#: scripted expert and the whole attribution study need nothing from it. Tests
+#: that do need it skip rather than fail, so a base install reports a clean run
+#: instead of five errors that look like the project is broken.
+requires_torch = pytest.mark.skipif(
+    importlib.util.find_spec("torch") is None,
+    reason="torch not installed; run 'make torch-cpu' or 'make torch-cuda'",
+)
 
 
 @pytest.fixture
@@ -112,6 +122,7 @@ def test_subsample_is_deterministic(run_dir):
     assert a.samples == b.samples
 
 
+@requires_torch
 def test_episode_split_never_shares_an_episode(run_dir):
     from icm.training.dataset import DatasetConfig, InterventionDataset
     from icm.training.train_bc import episode_split
@@ -124,6 +135,7 @@ def test_episode_split_never_shares_an_episode(run_dir):
     assert not (train_eps & val_eps)
 
 
+@requires_torch
 def test_policy_shapes_and_backward():
     import torch
 
@@ -142,6 +154,7 @@ def test_policy_shapes_and_backward():
     assert np.isfinite(metrics["loss"])
 
 
+@requires_torch
 def test_action_valid_mask_excludes_padding():
     import torch
 
@@ -161,6 +174,7 @@ def test_action_valid_mask_excludes_padding():
     assert torch.allclose(masked, still_masked)
 
 
+@requires_torch
 def test_temporal_ensemble_prefers_recent_predictions():
     from icm.policies.bc import TemporalEnsemble
 
@@ -179,6 +193,7 @@ def test_size_estimator_scales_as_expected():
     assert estimate_size(1000, n_cameras=1, depth=False)["raw_gb"] < one["raw_gb"]
 
 
+@requires_torch
 def test_training_runs_end_to_end_in_a_subprocess(run_dir, tmp_path):
     out = tmp_path / "train_out"
     proc = subprocess.run(
