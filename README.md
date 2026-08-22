@@ -140,6 +140,14 @@ Run `make help` for everything else.
 
 ---
 
+<p align="center">
+  <img src="docs/media/misattribution.png" alt="Misattribution by lag class" width="640"><br>
+  <img src="docs/media/trace_sweep.png" alt="Misattribution against supervisor tracing accuracy" width="470">
+</p>
+
+Full experimental design, including the controls and what it cannot tell you:
+**[docs/study-design.md](docs/study-design.md)**.
+
 ## The experiment
 
 ### Measuring attribution
@@ -234,7 +242,9 @@ src/icm/
   eval/        rollout loop, Wilson-interval metrics
   cli/         icm-collect, icm-train, icm-eval, icm-study, icm-dagger, icm-teleop
 interventionkit/   standalone package: recording + attribution analysis
-docs/              remote training box setup, notes
+docs/
+  study-design.md      the experiment, its controls, and its limits
+  remote-training-box.md  running this on a GPU box over SSH
 ```
 
 ## Things that were not obvious

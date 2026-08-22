@@ -1,16 +1,86 @@
 # Running this project on a headless training box
 
-The workflow this repo assumes: a GPU machine (RTX 4060) left at home running
-Ubuntu headless, driven over SSH from a laptop. Training runs for hours, so it
-has to survive dropped connections, closed lids and reboots — and the machine
-has to be safe to leave physically unattended.
+The workflow this repo assumes: a GPU machine left at home, driven over SSH from
+a laptop. Training runs for hours, so it has to survive dropped connections,
+closed lids and reboots — and the machine has to be safe to leave physically
+unattended.
 
 Nothing here is required to *use* the code. It is the setup the defaults were
 chosen for.
 
+Two routes, depending on what the GPU box runs.
+
 ---
 
-## 1. Stop the laptop sleeping when you close the lid
+## Route A: the GPU box runs Windows (via WSL2)
+
+Works well and needs no reinstall. CUDA passes through to WSL2, and the project
+runs unmodified inside it.
+
+**Enable systemd in WSL** (otherwise `systemctl` does not exist):
+
+```bash
+sudo tee /etc/wsl.conf > /dev/null <<'EOF'
+[boot]
+systemd=true
+EOF
+```
+Then from PowerShell: `wsl --shutdown`, and reopen.
+
+**Keep the machine awake** — PowerShell as Administrator:
+
+```powershell
+powercfg /change standby-timeout-ac 0
+powercfg /change hibernate-timeout-ac 0
+```
+
+**SSH straight into Ubuntu.** Install OpenSSH Server via Settings → System →
+Optional features, then in Administrator PowerShell:
+
+```powershell
+Set-Service -Name sshd -StartupType Automatic
+Start-Service sshd
+New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell `
+  -Value "C:\Windows\System32\wsl.exe" -PropertyType String -Force
+```
+
+The `DefaultShell` line makes every SSH login land in Ubuntu rather than
+PowerShell.
+
+**Authenticate with a key, not a password.** A Windows PIN is not a password and
+SSH cannot use it; if the account is a Microsoft account there may be no usable
+password at all. Generate a key on the laptop (`ssh-keygen -t ed25519`) and, on
+the GPU box in Administrator PowerShell:
+
+```powershell
+Add-Content C:\ProgramData\ssh\administrators_authorized_keys '<paste the public key line>'
+icacls.exe C:\ProgramData\ssh\administrators_authorized_keys /inheritance:r `
+  /grant "Administrators:F" /grant "SYSTEM:F"
+Restart-Service sshd
+```
+
+Administrator accounts use `administrators_authorized_keys`, **not** the usual
+`~/.ssh/authorized_keys`, and the ACL must contain only Administrators and
+SYSTEM or sshd silently ignores the file. Both catch people out.
+
+Connect with the **Windows** account name, which is often not the WSL username:
+`whoami` prints it. Using the wrong one produces `Invalid user` in
+`Get-WinEvent -LogName "OpenSSH/Operational"`, which is the fastest way to
+diagnose a refused login.
+
+Finally, work in the Linux home directory, never under `/mnt/c` — the Windows
+filesystem is roughly ten times slower under WSL for git and Python.
+
+**Privacy:** `Win+L` locks the console. SSH sessions and training runs continue
+underneath, and anyone at the keyboard sees only a lock screen.
+
+---
+
+## Route B: the GPU box runs Linux natively
+
+---
+
+### 1. Stop the laptop sleeping when you close the lid
 
 The single most common "my server vanished" cause. A laptop-as-server suspends
 on lid close by default and every SSH session dies with it.
@@ -34,7 +104,7 @@ Screen blanking is fine to leave on — it saves power and does not stop compute
 
 ---
 
-## 2. Remote access without exposing SSH to the internet
+### 2. Remote access without exposing SSH to the internet
 
 Port-forwarding SSH to the open internet means constant brute-force traffic and
 one CVE away from a bad day. Use a private overlay network instead. Tailscale is
@@ -73,7 +143,7 @@ Copy your key up **before** disabling passwords, or you will lock yourself out:
 
 ---
 
-## 3. Stopping other people using the machine
+### 3. Stopping other people using the machine
 
 Threats in rough order of likelihood for a machine in a shared house or lab.
 
@@ -159,7 +229,7 @@ could be stolen or if you hold data you are contractually obliged to protect.
 
 ---
 
-## 4. Keeping long runs alive
+### 4. Keeping long runs alive
 
 Never start a training run in a bare SSH session — the run dies with the
 connection.
@@ -182,7 +252,7 @@ resumes with `--resume`, so a reboot costs minutes rather than the whole run.
 
 ---
 
-## 5. Watching a run from the other laptop
+### 5. Watching a run from the other laptop
 
 Metrics are written as JSON Lines, deliberately, so monitoring needs no extra
 services:
