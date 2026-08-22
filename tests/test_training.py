@@ -14,8 +14,8 @@ import sys
 import numpy as np
 import pytest
 
-from interventionkit import InterventionRecorder
 from icm.training.weighting import CreditAssignment, corrected_span
+from interventionkit import InterventionRecorder
 
 PHASES = ("approach", "grasp", "lift", "place")
 
@@ -31,18 +31,25 @@ def run_dir(tmp_path):
                 phase = min(t // 10, 3)
                 timeline.append(phase)
                 if t >= 25:
-                    episode.expert_step(np.full(7, 0.5, dtype=np.float32), phase=phase,
-                                        proprio=np.zeros(24, dtype=np.float32),
-                                        privileged=np.zeros(27, dtype=np.float32))
+                    episode.expert_step(
+                        np.full(7, 0.5, dtype=np.float32),
+                        phase=phase,
+                        proprio=np.zeros(24, dtype=np.float32),
+                        privileged=np.zeros(27, dtype=np.float32),
+                    )
                 else:
-                    episode.policy_step(np.zeros(7, dtype=np.float32), phase=phase,
-                                        proprio=np.zeros(24, dtype=np.float32),
-                                        privileged=np.zeros(27, dtype=np.float32))
+                    episode.policy_step(
+                        np.zeros(7, dtype=np.float32),
+                        phase=phase,
+                        proprio=np.zeros(24, dtype=np.float32),
+                        privileged=np.zeros(27, dtype=np.float32),
+                    )
             episode.attribute(0 if ep < 2 else 2)
-            episode.finish(success=False,
-                           ground_truth={"root_phase": 0, "root_onset_step": 4,
-                                         "symptom_step": 22},
-                           extra={"phase_timeline": timeline})
+            episode.finish(
+                success=False,
+                ground_truth={"root_phase": 0, "root_onset_step": 4, "symptom_step": 22},
+                extra={"phase_timeline": timeline},
+            )
     return tmp_path
 
 
@@ -71,9 +78,12 @@ def test_stated_strategy_follows_a_wrong_attribution(run_dir):
 def test_dataset_selects_only_corrective_frames(run_dir):
     from icm.training.dataset import DatasetConfig, InterventionDataset
 
-    ds = InterventionDataset(run_dir, DatasetConfig(supervision="corrections",
-                                                    credit=CreditAssignment.ONSET,
-                                                    state_key="privileged"))
+    ds = InterventionDataset(
+        run_dir,
+        DatasetConfig(
+            supervision="corrections", credit=CreditAssignment.ONSET, state_key="privileged"
+        ),
+    )
     assert len(ds) == 6 * 15  # steps 25..39 of each episode
     sample = ds[0]
     np.testing.assert_allclose(sample["action"][0], np.full(7, 0.5), atol=1e-6)
@@ -83,8 +93,9 @@ def test_dataset_chunk_padding_repeats_the_last_action(run_dir):
     """Zero padding would teach the policy to jerk to the origin at episode end."""
     from icm.training.dataset import DatasetConfig, InterventionDataset
 
-    ds = InterventionDataset(run_dir, DatasetConfig(supervision="corrections", chunk=8,
-                                                    state_key="privileged"))
+    ds = InterventionDataset(
+        run_dir, DatasetConfig(supervision="corrections", chunk=8, state_key="privileged")
+    )
     last = ds[len(ds) - 1]
     np.testing.assert_allclose(last["action"][-1], last["action"][0], atol=1e-6)
     assert last["action_valid"].sum() == 1
@@ -119,8 +130,12 @@ def test_policy_shapes_and_backward():
     from icm.policies.bc import BCPolicy, PolicyConfig
 
     policy = BCPolicy(PolicyConfig(state_dim=27, chunk=8))
-    batch = {"state": torch.randn(4, 27), "action": torch.randn(4, 8, 7),
-             "action_valid": torch.ones(4, 8), "weight": torch.ones(4)}
+    batch = {
+        "state": torch.randn(4, 27),
+        "action": torch.randn(4, 8, 7),
+        "action_valid": torch.ones(4, 8),
+        "weight": torch.ones(4),
+    }
     assert policy(batch).shape == (4, 8, 7)
     loss, metrics = policy.loss(batch)
     loss.backward()
@@ -134,8 +149,12 @@ def test_action_valid_mask_excludes_padding():
 
     policy = BCPolicy(PolicyConfig(state_dim=27, chunk=4))
     policy.eval()  # dropout is stochastic in train mode; two passes would not match
-    batch = {"state": torch.zeros(1, 27), "action": torch.zeros(1, 4, 7),
-             "action_valid": torch.tensor([[1.0, 0.0, 0.0, 0.0]]), "weight": torch.ones(1)}
+    batch = {
+        "state": torch.zeros(1, 27),
+        "action": torch.zeros(1, 4, 7),
+        "action_valid": torch.tensor([[1.0, 0.0, 0.0, 0.0]]),
+        "weight": torch.ones(1),
+    }
     masked, _ = policy.loss(batch)
     batch["action"][0, 1:] = 1e6  # garbage in the padded region
     still_masked, _ = policy.loss(batch)
@@ -163,10 +182,24 @@ def test_size_estimator_scales_as_expected():
 def test_training_runs_end_to_end_in_a_subprocess(run_dir, tmp_path):
     out = tmp_path / "train_out"
     proc = subprocess.run(
-        [sys.executable, "-m", "icm.cli.train", str(run_dir), "-o", str(out),
-         "--smoke", "--state-key", "privileged", "--workers", "0", "--val-fraction", "0.34",
-         "--quiet"],
-        capture_output=True, text=True,
+        [
+            sys.executable,
+            "-m",
+            "icm.cli.train",
+            str(run_dir),
+            "-o",
+            str(out),
+            "--smoke",
+            "--state-key",
+            "privileged",
+            "--workers",
+            "0",
+            "--val-fraction",
+            "0.34",
+            "--quiet",
+        ],
+        capture_output=True,
+        text=True,
     )
     assert proc.returncode == 0, proc.stderr[-3000:]
     assert (out / "checkpoint.pt").is_file()

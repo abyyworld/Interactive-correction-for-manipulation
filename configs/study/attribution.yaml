@@ -1,0 +1,19 @@
+# Error-attribution study.
+episodes_per_fault: 40
+control_episodes: 40      # fault-free, to measure unnecessary interventions
+severity: 0.9
+seed: 0
+render_images: false      # the study needs no pixels; ~40x faster without them
+
+# Probability the supervisor traces a failure back to its true cause rather than
+# blaming the phase where they noticed it. A FREE PARAMETER, not a measurement:
+# the deliverable is the curve across it, so the real human value can be read off
+# once the VR study provides one.
+trace_accuracy: 0.35
+
+supervisor:
+  reaction_mean: 6.0      # control steps; 300 ms at 20 Hz
+  reaction_std: 3.0
+  detection_prob: 0.95
+  stall_patience: 120
+  hold_until_end: true

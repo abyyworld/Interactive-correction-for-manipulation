@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from tests.conftest import requires_assets
 
@@ -12,8 +11,12 @@ def test_ik_converges_across_the_workspace(env):
     rng = np.random.default_rng(0)
     errors = []
     for _ in range(40):
-        target = np.array([rng.uniform(0.36, 0.68), rng.uniform(-0.24, 0.34), rng.uniform(0.03, 0.30)])
-        result = env.robot.solve_ik(target, grasp_quat(rng.uniform(-np.pi / 2, np.pi / 2)), max_iters=200)
+        target = np.array(
+            [rng.uniform(0.36, 0.68), rng.uniform(-0.24, 0.34), rng.uniform(0.03, 0.30)]
+        )
+        result = env.robot.solve_ik(
+            target, grasp_quat(rng.uniform(-np.pi / 2, np.pi / 2)), max_iters=200
+        )
         assert result.converged, f"IK failed for {target}"
         errors.append(result.pos_err)
     assert max(errors) < 1e-3  # sub-millimetre

@@ -28,7 +28,6 @@ from typing import Any
 import mujoco
 import numpy as np
 
-from ..control.ik import solve_ik
 from .assets import scene as scene_mod
 from .assets.scene import GOAL_POS, WORKSPACE_X, WORKSPACE_Y, ObjectSpec, SceneSpec, build_model
 from .cameras import CameraConfig, CameraRig
@@ -118,7 +117,10 @@ class PickPlaceEnv:
             self.rig = CameraRig(
                 self.model,
                 CameraConfig(
-                    names=cfg.cameras, width=cfg.image_size, height=cfg.image_size, depth=cfg.use_depth
+                    names=cfg.cameras,
+                    width=cfg.image_size,
+                    height=cfg.image_size,
+                    depth=cfg.use_depth,
                 ),
             )
 
@@ -229,7 +231,9 @@ class PickPlaceEnv:
         cfg = self.config
 
         mujoco.mj_resetData(self.model, self.data)
-        self.model.actuator_forcerange[self.robot.gripper_actuator_id] = self._orig_gripper_forcerange
+        self.model.actuator_forcerange[self.robot.gripper_actuator_id] = (
+            self._orig_gripper_forcerange
+        )
         ready = self.robot.ready_qpos()
         self.robot.reset_arm(ready, gripper_opening=1.0)
 
@@ -483,7 +487,9 @@ class PickPlaceEnv:
             parts.append(self.object_pos(spec.name))
             parts.append(self.object_quat(spec.name))
         parts.append(self.goal_pos)
-        return np.concatenate([np.asarray(p, dtype=float).ravel() for p in parts]).astype(np.float32)
+        return np.concatenate([np.asarray(p, dtype=float).ravel() for p in parts]).astype(
+            np.float32
+        )
 
     def observation(self) -> dict[str, Any]:
         obs: dict[str, Any] = {"proprio": self.proprio()}
@@ -493,10 +499,14 @@ class PickPlaceEnv:
             obs.update(self.rig.render(self.data))
         return obs
 
-    def render_frame(self, camera: str = "scene", width: int = 480, height: int = 360) -> np.ndarray:
+    def render_frame(
+        self, camera: str = "scene", width: int = 480, height: int = 360
+    ) -> np.ndarray:
         rig = self.rig
         if rig is None:
-            rig = CameraRig(self.model, CameraConfig(names=(camera,), width=8, height=8, depth=False))
+            rig = CameraRig(
+                self.model, CameraConfig(names=(camera,), width=8, height=8, depth=False)
+            )
         return rig.render_single(self.data, camera, width, height)
 
     # ------------------------------------------------------------------ snapshot / restore

@@ -1,0 +1,18 @@
+# Credit-assignment degradation experiment.
+#
+# Only the rewind target differs between strategies; seeds, faults, supervisor
+# and hyperparameters are identical, so any difference in final success rate is
+# attributable to where the correction landed.
+strategies: [onset, symptom, stated, oracle]
+collect_episodes: 150
+eval_episodes: 150
+trace_accuracy: 0.35
+
+# Rewinding further necessarily yields more corrective frames. Without this,
+# "corrected the right states" cannot be separated from "had more data".
+equalise_frames: true
+
+faults: [grasp_offset, weak_grip, wrong_object, lift_slip, early_release]
+severity_range: [0.8, 1.0]
+state_key: privileged
+seed: 0

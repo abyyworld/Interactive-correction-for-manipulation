@@ -44,14 +44,13 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from interventionkit.attribution import per_phase_breakdown
 
 from interventionkit import InterventionRecorder, RunReader, analyse
-from interventionkit.attribution import per_phase_breakdown
 
 from ..control.scripted import ExpertConfig, ScriptedExpert
 from ..envs.faults import FAULT_PHASES, FaultInjector, FaultSpec, FaultType
 from ..envs.pick_place import EnvConfig, PickPlaceEnv
-from ..envs.phases import Phase
 from ..eval.rollout import ScriptedAgent, rollout
 from .supervisor import SupervisorConfig, SyntheticSupervisor
 
@@ -117,7 +116,7 @@ def run_attribution_study(
     jobs += [(None, i) for i in range(cfg.control_episodes)]
 
     per_fault: dict[str, dict[str, Any]] = {}
-    for idx, (ft, i) in enumerate(jobs):
+    for idx, (ft, _episode_index) in enumerate(jobs):
         seed = cfg.seed * 100_000 + idx
         if ft is None:
             agent = ScriptedAgent(ScriptedExpert(cfg.expert))
@@ -129,8 +128,13 @@ def run_attribution_study(
 
         with recorder.episode(seed=seed, instruction=env.default_instruction()) as ep:
             result = rollout(
-                env, agent, supervisor=supervisor, recorder=ep, seed=seed,
-                record_keys=cfg.record_keys, supervisor_actor="expert",
+                env,
+                agent,
+                supervisor=supervisor,
+                recorder=ep,
+                seed=seed,
+                record_keys=cfg.record_keys,
+                supervisor_actor="expert",
             )
 
         key = ft.value if ft is not None else "none"
@@ -168,12 +172,16 @@ def run_attribution_study(
                 "n": v["n"],
                 "detection_rate": v["detected"] / v["n"],
                 "success_rate_with_correction": v["success"] / v["n"],
-                "mean_takeover_step": float(np.mean(v["takeover_steps"])) if v["takeover_steps"] else float("nan"),
+                "mean_takeover_step": float(np.mean(v["takeover_steps"]))
+                if v["takeover_steps"]
+                else float("nan"),
             }
             for k, v in per_fault.items()
         },
         "unnecessary_intervention_rate": (
-            per_fault["none"]["detected"] / per_fault["none"]["n"] if "none" in per_fault else float("nan")
+            per_fault["none"]["detected"] / per_fault["none"]["n"]
+            if "none" in per_fault
+            else float("nan")
         ),
     }
     (out_dir / "summary.json").write_text(json.dumps(report, indent=2, default=float))
@@ -208,8 +216,12 @@ def _group_by_lag(episodes) -> dict[str, dict[str, float]]:
         lag: {
             "n": float(len(v["onset"])),
             "onset_misattribution_rate": float(np.mean(v["onset"])) if v["onset"] else float("nan"),
-            "symptom_misattribution_rate": float(np.mean(v["symptom"])) if v["symptom"] else float("nan"),
-            "stated_misattribution_rate": float(np.mean(v["stated"])) if v["stated"] else float("nan"),
+            "symptom_misattribution_rate": float(np.mean(v["symptom"]))
+            if v["symptom"]
+            else float("nan"),
+            "stated_misattribution_rate": float(np.mean(v["stated"]))
+            if v["stated"]
+            else float("nan"),
             "mean_detection_lag": float(np.mean(v["delay"])) if v["delay"] else float("nan"),
         }
         for lag, v in sorted(buckets.items())
@@ -233,9 +245,15 @@ def sweep_trace_accuracy(
     env = PickPlaceEnv(EnvConfig(render_images=base.render_images), seed=base.seed)
     results = {}
     for acc in accuracies:
-        cfg = StudyConfig(**{**asdict(base), "trace_accuracy": acc,
-                             "faults": base.faults,
-                             "supervisor": base.supervisor, "expert": base.expert})
+        cfg = StudyConfig(
+            **{
+                **asdict(base),
+                "trace_accuracy": acc,
+                "faults": base.faults,
+                "supervisor": base.supervisor,
+                "expert": base.expert,
+            }
+        )
         if progress:
             print(f"[sweep] trace_accuracy={acc}", flush=True)
         results[str(acc)] = run_attribution_study(

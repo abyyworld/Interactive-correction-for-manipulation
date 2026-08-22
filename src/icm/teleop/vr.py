@@ -29,7 +29,6 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..envs.panda import grasp_quat
 from .base import TeleopCommand
 from .protocol import DEFAULT_PORT, MAX_PACKET_BYTES, VRPacket
 
@@ -148,8 +147,12 @@ class VRTeleop:
             self._reported = True
 
         return TeleopCommand(
-            action=action, engaged=True, attribution=attribution, confidence=confidence,
-            abort=packet.abort, extra={"seq": packet.seq, "trigger": packet.trigger},
+            action=action,
+            engaged=True,
+            attribution=attribution,
+            confidence=confidence,
+            abort=packet.abort,
+            extra={"seq": packet.seq, "trigger": packet.trigger},
         )
 
     def close(self) -> None:
@@ -171,8 +174,14 @@ class MockVRClient:
         import time
 
         self.seq += 1
-        packet = VRPacket(seq=self.seq, t=time.time(), pos=tuple(float(x) for x in pos),
-                          trigger=trigger, engaged=engaged, **kwargs)
+        packet = VRPacket(
+            seq=self.seq,
+            t=time.time(),
+            pos=tuple(float(x) for x in pos),
+            trigger=trigger,
+            engaged=engaged,
+            **kwargs,
+        )
         self.sock.sendto(packet.to_bytes(), self.addr)
         return packet
 

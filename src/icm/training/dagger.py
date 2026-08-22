@@ -36,7 +36,7 @@ environment guarantees it bit-exactly.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +47,6 @@ from interventionkit import InterventionRecorder
 from ..control.scripted import ExpertConfig, ScriptedExpert
 from ..envs.phases import Phase
 from ..envs.pick_place import PickPlaceEnv
-from ..eval.rollout import ScriptedAgent
 from ..study.supervisor import SyntheticSupervisor
 from .weighting import CreditAssignment
 
@@ -61,6 +60,7 @@ class InteractiveEpisodeResult:
     intervened: bool = False
     takeover_step: int | None = None
     symptom_step: int | None = None
+    symptom_phase: int | None = None
     rewind_step: int | None = None
     attributed_phase: int | None = None
     true_root_phase: int | None = None
@@ -152,7 +152,11 @@ def collect_interactive_episode(
         if command.engaged:
             takeover = step
             res.detect_reason = str(command.extra.get("detect_reason", ""))
-            sym = command.extra.get("detect_phase", -1)
+            # Record the phase the symptom appeared in, not just its step:
+            # analysis compares it against the true root phase, and it is not
+            # recoverable from the recording afterwards.
+            symptom_phase = int(command.extra.get("detect_phase", -1))
+            res.symptom_phase = symptom_phase if symptom_phase >= 0 else None
             res.symptom_step = command.extra.get("detect_step", None)
             if res.symptom_step is not None and int(res.symptom_step) < 0:
                 res.symptom_step = None
@@ -216,7 +220,7 @@ def collect_interactive_episode(
     info = env.info_dict()
     corrective.resume_from_state(env)
     remaining = env.config.max_episode_steps - res.n_policy_steps
-    for step in range(max(0, remaining)):
+    for _ in range(max(0, remaining)):
         action = corrective.act(env)
         payload = {k: obs[k] for k in record_keys if k in obs}
         recorder_episode.expert_step(action, phase=int(info["phase"]), **payload)
@@ -235,6 +239,7 @@ def collect_interactive_episode(
         {
             "takeover_step": takeover,
             "symptom_step": res.symptom_step,
+            "symptom_phase": res.symptom_phase,
             "rewind_step": rewind,
             "strategy": strategy.value,
             "detect_reason": res.detect_reason,
@@ -267,9 +272,13 @@ class CollectionSummary:
             "success_before_correction": self.success_before / n,
             "success_after_correction": self.success_after / n,
             "correction_steps": self.correction_steps,
-            "mean_rewind_offset": float(np.mean(self.rewind_offsets)) if self.rewind_offsets else 0.0,
+            "mean_rewind_offset": float(np.mean(self.rewind_offsets))
+            if self.rewind_offsets
+            else 0.0,
             "attribution_accuracy": (
-                self.attribution_correct / self.attribution_total if self.attribution_total else float("nan")
+                self.attribution_correct / self.attribution_total
+                if self.attribution_total
+                else float("nan")
             ),
         }
 
@@ -290,7 +299,9 @@ def collect_round(
     """Collect one round of supervised episodes under a credit-assignment strategy."""
     out_dir = Path(out_dir)
     recorder = InterventionRecorder(
-        out_dir, task="pick_place", phase_names=PHASE_NAMES,
+        out_dir,
+        task="pick_place",
+        phase_names=PHASE_NAMES,
         config={"strategy": strategy.value, "n_episodes": n_episodes},
     )
     corrective = ScriptedExpert(expert_config or ExpertConfig())
@@ -301,8 +312,14 @@ def collect_round(
         agent = make_agent(i)
         with recorder.episode(seed=ep_seed, instruction=env.default_instruction()) as ep:
             r = collect_interactive_episode(
-                env, agent, supervisor, ep, seed=ep_seed, strategy=strategy,
-                corrective_expert=corrective, record_keys=record_keys,
+                env,
+                agent,
+                supervisor,
+                ep,
+                seed=ep_seed,
+                strategy=strategy,
+                corrective_expert=corrective,
+                record_keys=record_keys,
             )
         summary.episodes += 1
         summary.intervened += int(r.intervened)
@@ -315,7 +332,7 @@ def collect_round(
             summary.attribution_total += 1
             summary.attribution_correct += int(r.attributed_phase == r.true_root_phase)
         if progress and (i + 1) % 25 == 0:
-            print(f"    [{i+1}/{n_episodes}]", flush=True)
+            print(f"    [{i + 1}/{n_episodes}]", flush=True)
 
     (out_dir / "collection.json").write_text(json.dumps(summary.to_dict(), indent=2, default=float))
     return out_dir, summary

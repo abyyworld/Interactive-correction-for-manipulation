@@ -24,7 +24,6 @@ from typing import Any
 import numpy as np
 
 from interventionkit import RunReader
-from interventionkit.schema import ACTOR_POLICY
 
 from .weighting import CreditAssignment, corrected_span
 

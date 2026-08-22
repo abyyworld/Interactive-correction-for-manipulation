@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from interventionkit.attribution import analyse, interval_iou, per_phase_breakdown
 from interventionkit.schema import EpisodeMeta, InterventionSegment
 
@@ -15,8 +14,13 @@ def _ep(i, onset_phase, root_phase, attributed=None, start=30, end=50, root_onse
     if pnr is not None:
         gt["pnr_step"] = pnr
     return EpisodeMeta(
-        episode_id=f"e{i}", task="t", seed=i, n_steps=60, success=False,
-        interventions=[seg], ground_truth=gt,
+        episode_id=f"e{i}",
+        task="t",
+        seed=i,
+        n_steps=60,
+        success=False,
+        interventions=[seg],
+        ground_truth=gt,
     )
 
 

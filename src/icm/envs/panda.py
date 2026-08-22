@@ -87,7 +87,9 @@ class PandaRobot:
 
         self.tcp_site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, TCP_SITE)
         if self.tcp_site_id < 0:
-            raise KeyError("TCP site missing - build the model via icm.envs.assets.scene.build_model")
+            raise KeyError(
+                "TCP site missing - build the model via icm.envs.assets.scene.build_model"
+            )
         self.hand_body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, HAND_BODY)
 
         self.arm_joint_range = model.jnt_range[self.arm_joint_ids].copy()
@@ -136,7 +138,9 @@ class PandaRobot:
 
     def set_gripper_ctrl(self, opening: float) -> None:
         """``opening`` in [0, 1]: 0 fully closed, 1 fully open."""
-        self.data.ctrl[self.gripper_actuator_id] = float(np.clip(opening, 0.0, 1.0)) * GRIPPER_CTRL_MAX
+        self.data.ctrl[self.gripper_actuator_id] = (
+            float(np.clip(opening, 0.0, 1.0)) * GRIPPER_CTRL_MAX
+        )
 
     @property
     def gripper_ctrl(self) -> float:

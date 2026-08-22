@@ -19,7 +19,9 @@ from pathlib import Path
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="icm-train", description=__doc__.split("\n")[0])
     ap.add_argument("data", nargs="+", help="one or more interventionkit run directories")
-    ap.add_argument("-o", "--out", required=True, help="output directory for checkpoints and metrics")
+    ap.add_argument(
+        "-o", "--out", required=True, help="output directory for checkpoints and metrics"
+    )
     ap.add_argument("--steps", type=int, default=20_000)
     ap.add_argument("--batch-size", type=int, default=64)
     ap.add_argument("--lr", type=float, default=3e-4)
@@ -28,23 +30,34 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--resume", action="store_true")
-    ap.add_argument("--state-key", default="proprio", choices=["proprio", "privileged"],
-                    help="privileged uses ground-truth object poses: a state-based upper bound, "
-                         "not a deployable policy")
-    ap.add_argument("--images", nargs="*", default=[],
-                    help="image observation keys, e.g. wrist_rgb scene_rgb")
+    ap.add_argument(
+        "--state-key",
+        default="proprio",
+        choices=["proprio", "privileged"],
+        help="privileged uses ground-truth object poses: a state-based upper bound, "
+        "not a deployable policy",
+    )
+    ap.add_argument(
+        "--images", nargs="*", default=[], help="image observation keys, e.g. wrist_rgb scene_rgb"
+    )
     ap.add_argument("--backbone", default="resnet18", choices=["resnet18", "resnet34", "small"])
     ap.add_argument("--pretrained", action="store_true", help="ImageNet weights (needs network)")
     ap.add_argument("--image-size", type=int, default=84)
     ap.add_argument("--supervision", default="corrections", choices=["corrections", "all", "demos"])
     ap.add_argument("--credit", default="onset", choices=["onset", "symptom", "stated", "oracle"])
-    ap.add_argument("--subsample", type=int, default=0,
-                    help="cap training frames, for size-controlled comparisons (0 = all)")
+    ap.add_argument(
+        "--subsample",
+        type=int,
+        default=0,
+        help="cap training frames, for size-controlled comparisons (0 = all)",
+    )
     ap.add_argument("--val-fraction", type=float, default=0.1)
     ap.add_argument("--log-every", type=int, default=50)
     ap.add_argument("--eval-every", type=int, default=1000)
     ap.add_argument("--checkpoint-every", type=int, default=1000)
-    ap.add_argument("--smoke", action="store_true", help="tiny run to verify the pipeline end to end")
+    ap.add_argument(
+        "--smoke", action="store_true", help="tiny run to verify the pipeline end to end"
+    )
     ap.add_argument("--quiet", action="store_true")
     return ap
 
@@ -78,9 +91,15 @@ def main(argv: list[str] | None = None) -> int:
         pretrained=args.pretrained,
     )
     tcfg = TrainConfig(
-        steps=args.steps, batch_size=args.batch_size, lr=args.lr, num_workers=args.workers,
-        seed=args.seed, device=args.device, val_fraction=args.val_fraction,
-        log_every=args.log_every, eval_every=args.eval_every,
+        steps=args.steps,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        num_workers=args.workers,
+        seed=args.seed,
+        device=args.device,
+        val_fraction=args.val_fraction,
+        log_every=args.log_every,
+        eval_every=args.eval_every,
         checkpoint_every=args.checkpoint_every,
     )
 

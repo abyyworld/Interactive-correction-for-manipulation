@@ -73,8 +73,16 @@ class ObjectSpec:
 
 DEFAULT_OBJECTS: tuple[ObjectSpec, ...] = (
     ObjectSpec("target", (0.85, 0.15, 0.15, 1.0), "box", color_word="red", shape_word="block"),
-    ObjectSpec("distractor_a", (0.15, 0.35, 0.85, 1.0), "box", color_word="blue", shape_word="block"),
-    ObjectSpec("distractor_b", (0.15, 0.65, 0.25, 1.0), "cylinder", color_word="green", shape_word="cylinder"),
+    ObjectSpec(
+        "distractor_a", (0.15, 0.35, 0.85, 1.0), "box", color_word="blue", shape_word="block"
+    ),
+    ObjectSpec(
+        "distractor_b",
+        (0.15, 0.65, 0.25, 1.0),
+        "cylinder",
+        color_word="green",
+        shape_word="cylinder",
+    ),
 )
 
 
@@ -225,7 +233,7 @@ def _object_xml(spec: ObjectSpec, index: int) -> str:
       <freejoint name="{spec.name}_free"/>
       {inertia}
       <geom name="{spec.name}_geom" type="{spec.shape}" size="{spec.geom_size()}"
-            rgba="{' '.join(str(c) for c in spec.rgba)}" friction="1.0 0.02 0.001"
+            rgba="{" ".join(str(c) for c in spec.rgba)}" friction="1.0 0.02 0.001"
             solimp="0.98 0.99 0.001" solref="0.005 1" condim="4" priority="1"/>
     </body>"""
 
@@ -273,9 +281,9 @@ def build_scene_xml(spec: SceneSpec | None = None) -> str:
     <light name="fill" pos="0.2 0.6 1.4" dir="0.15 -0.4 -1" directional="true" diffuse="0.28 0.28 0.3"/>
     <geom name="floor" type="plane" size="0 0 0.05" pos="0 0 {-TABLE_HEIGHT}" material="floor"/>
 
-    <camera name="scene" pos="{' '.join(str(v) for v in spec.scene_cam_pos)}"
+    <camera name="scene" pos="{" ".join(str(v) for v in spec.scene_cam_pos)}"
             xyaxes="{scene_axes}" fovy="{spec.camera_fovy}" mode="fixed"/>
-    <camera name="front" pos="{' '.join(str(v) for v in spec.front_cam_pos)}"
+    <camera name="front" pos="{" ".join(str(v) for v in spec.front_cam_pos)}"
             xyaxes="{front_axes}" fovy="{spec.camera_fovy}" mode="fixed"/>
 
 {_table_xml()}

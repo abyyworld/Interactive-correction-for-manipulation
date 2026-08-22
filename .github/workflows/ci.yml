@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # MuJoCo renders offscreen through OSMesa on a runner with no GPU.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libosmesa6 libgl1 libegl1
+
+      # The Panda meshes are 33 MB fetched from a pinned commit, so cache them
+      # on that SHA rather than re-cloning on every run.
+      - name: Cache robot assets
+        uses: actions/cache@v4
+        with:
+          path: src/icm/envs/assets/menagerie
+          key: menagerie-${{ hashFiles('src/icm/envs/assets/fetch.py') }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -e ./interventionkit
+          pip install -e ".[dev]"
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Fetch assets
+        run: python -m icm.envs.assets.fetch
+
+      - name: Lint
+        run: ruff check src interventionkit tests
+
+      - name: Test
+        env:
+          MUJOCO_GL: osmesa
+        run: pytest -q
+
+  toolkit-standalone:
+    # interventionkit must install and pass on its own, with numpy only. If this
+    # job needs anything from the parent project, the package is not extractable.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install only interventionkit
+        run: |
+          python -m pip install --upgrade pip
+          pip install ./interventionkit pytest
+      - name: Confirm it has no heavy dependencies
+        run: |
+          python -c "import interventionkit, sys; assert 'torch' not in sys.modules and 'mujoco' not in sys.modules; print(interventionkit.__version__)"
+          ! pip show mujoco 2>/dev/null
+          ! pip show torch 2>/dev/null
+      - name: Test
+        run: pytest interventionkit/tests -q

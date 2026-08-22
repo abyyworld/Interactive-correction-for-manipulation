@@ -49,12 +49,16 @@ class EpisodeRecorder:
         self._w.record(action=action, actor=ACTOR_POLICY, phase=phase, **arrays)
         self._t += 1
 
-    def human_step(self, action, phase: int = -1, trigger: str = "human_gated", **arrays: Any) -> None:
+    def human_step(
+        self, action, phase: int = -1, trigger: str = "human_gated", **arrays: Any
+    ) -> None:
         self._open_segment(phase, trigger)
         self._w.record(action=action, actor=ACTOR_HUMAN, phase=phase, **arrays)
         self._t += 1
 
-    def expert_step(self, action, phase: int = -1, trigger: str = "scripted", **arrays: Any) -> None:
+    def expert_step(
+        self, action, phase: int = -1, trigger: str = "scripted", **arrays: Any
+    ) -> None:
         """A synthetic supervisor. Recorded as an intervention, flagged as not human."""
         self._open_segment(phase, trigger)
         self._w.record(action=action, actor=ACTOR_EXPERT, phase=phase, **arrays)
@@ -64,7 +68,11 @@ class EpisodeRecorder:
         if self._open is None:
             name = self._phase_names[phase] if 0 <= phase < len(self._phase_names) else ""
             self._open = InterventionSegment(
-                start=self._t, end=self._t, onset_phase=int(phase), onset_phase_name=name, trigger=trigger
+                start=self._t,
+                end=self._t,
+                onset_phase=int(phase),
+                onset_phase_name=name,
+                trigger=trigger,
             )
             self._segments.append(self._open)
         self._open.end = self._t + 1
@@ -145,5 +153,7 @@ class InterventionRecorder:
     def root(self) -> Path:
         return self._run.root
 
-    def episode(self, seed: int, instruction: str = "", episode_id: str | None = None) -> EpisodeRecorder:
+    def episode(
+        self, seed: int, instruction: str = "", episode_id: str | None = None
+    ) -> EpisodeRecorder:
         return EpisodeRecorder(self._run.episode(seed, instruction, episode_id), self.phase_names)

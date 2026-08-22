@@ -37,9 +37,8 @@ import numpy as np
 from ..control.scripted import ExpertConfig, ScriptedExpert
 from ..envs.faults import DELAYED_FAULTS, IMMEDIATE_FAULTS, FaultInjector, FaultType, sample_fault
 from ..envs.pick_place import EnvConfig, PickPlaceEnv
-from ..eval.metrics import EvalResult, evaluate_agent, wilson_interval
+from ..eval.metrics import evaluate_agent
 from ..eval.rollout import ScriptedAgent
-from ..policies.bc import PolicyConfig
 from ..policies.runner import PolicyAgent, RunnerConfig
 from ..study.supervisor import SupervisorConfig, SyntheticSupervisor
 from ..training.dagger import collect_round
@@ -64,10 +63,16 @@ class DegradationConfig:
     equalise_frames: bool = True
     seed: int = 0
     state_key: str = "privileged"
-    train: TrainConfig = field(default_factory=lambda: TrainConfig(
-        steps=4000, batch_size=128, num_workers=0, eval_every=1000,
-        checkpoint_every=2000, log_every=500,
-    ))
+    train: TrainConfig = field(
+        default_factory=lambda: TrainConfig(
+            steps=4000,
+            batch_size=128,
+            num_workers=0,
+            eval_every=1000,
+            checkpoint_every=2000,
+            log_every=500,
+        )
+    )
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -95,6 +100,7 @@ def run_degradation_experiment(
             rng = np.random.default_rng(round_seed * 10_000 + i)
             spec = sample_fault(rng, types=cfg.faults, severity_range=cfg.severity_range)
             return ScriptedAgent(ScriptedExpert(expert_cfg), FaultInjector(spec, rng))
+
         return make_agent
 
     collected: dict[str, tuple[Path, Any]] = {}
@@ -107,10 +113,15 @@ def run_degradation_experiment(
             rng=np.random.default_rng(cfg.seed + 7),
         )
         path, summary = collect_round(
-            env, make_agent_factory(cfg.seed), supervisor,
+            env,
+            make_agent_factory(cfg.seed),
+            supervisor,
             out_root / f"data_{strategy.value}",
-            n_episodes=cfg.collect_episodes, strategy=strategy, seed=cfg.seed,
-            record_keys=("proprio", "privileged"), expert_config=expert_cfg,
+            n_episodes=cfg.collect_episodes,
+            strategy=strategy,
+            seed=cfg.seed,
+            record_keys=("proprio", "privileged"),
+            expert_config=expert_cfg,
         )
         collected[strategy.value] = (path, summary)
         if progress:
@@ -119,9 +130,12 @@ def run_degradation_experiment(
     # Frame budget shared by every condition, so coverage is compared, not volume.
     sizes = {}
     for name, (path, _) in collected.items():
-        ds = InterventionDataset(path, DatasetConfig(supervision="corrections",
-                                                     credit=CreditAssignment.ONSET,
-                                                     state_key=cfg.state_key))
+        ds = InterventionDataset(
+            path,
+            DatasetConfig(
+                supervision="corrections", credit=CreditAssignment.ONSET, state_key=cfg.state_key
+            ),
+        )
         sizes[name] = len(ds)
     budget = min(sizes.values()) if cfg.equalise_frames and sizes else None
     if progress:
@@ -132,8 +146,9 @@ def run_degradation_experiment(
         name = strategy.value
         path, coll = collected[name]
         run_dir = out_root / f"train_{name}"
-        dcfg = DatasetConfig(supervision="corrections", credit=CreditAssignment.ONSET,
-                             state_key=cfg.state_key)
+        dcfg = DatasetConfig(
+            supervision="corrections", credit=CreditAssignment.ONSET, state_key=cfg.state_key
+        )
         # credit=ONSET here on purpose: the rewind already decided which steps
         # carry corrective actions, so the dataset must take the recording at
         # face value rather than re-deriving a span.
@@ -149,8 +164,9 @@ def run_degradation_experiment(
         train_summary = _train_with_budget(path, run_dir, dcfg, cfg, budget)
 
         policy = load_policy(run_dir / "checkpoint.pt", device=cfg.train.resolve_device())
-        agent = PolicyAgent(policy, RunnerConfig(state_key=cfg.state_key,
-                                                 device=str(cfg.train.resolve_device())))
+        agent = PolicyAgent(
+            policy, RunnerConfig(state_key=cfg.state_key, device=str(cfg.train.resolve_device()))
+        )
         if progress:
             print(f"[eval] {name}", flush=True)
         ev = evaluate_agent(env, agent, n_episodes=cfg.eval_episodes, seed=cfg.seed + 999)
@@ -166,8 +182,7 @@ def run_degradation_experiment(
             print(f"        {name}: {ev}", flush=True)
 
     env.close()
-    report = {"config": cfg.to_dict(), "results": results,
-              "comparisons": _pairwise(results)}
+    report = {"config": cfg.to_dict(), "results": results, "comparisons": _pairwise(results)}
     (out_root / "degradation.json").write_text(json.dumps(report, indent=2, default=float))
     return report
 
@@ -185,22 +200,40 @@ def _train_with_budget(data_path, run_dir, dcfg, cfg, budget):
     import sys
 
     cmd = [
-        sys.executable, "-m", "icm.cli.train", str(data_path),
-        "-o", str(run_dir),
-        "--steps", str(cfg.train.steps),
-        "--batch-size", str(cfg.train.batch_size),
-        "--lr", str(cfg.train.lr),
-        "--chunk", str(dcfg.chunk),
-        "--device", cfg.train.device,
-        "--workers", str(cfg.train.num_workers),
-        "--seed", str(cfg.seed),
-        "--state-key", cfg.state_key,
-        "--supervision", dcfg.supervision,
-        "--credit", dcfg.credit.value,
-        "--val-fraction", str(cfg.train.val_fraction),
-        "--log-every", str(cfg.train.log_every),
-        "--eval-every", str(cfg.train.eval_every),
-        "--checkpoint-every", str(cfg.train.checkpoint_every),
+        sys.executable,
+        "-m",
+        "icm.cli.train",
+        str(data_path),
+        "-o",
+        str(run_dir),
+        "--steps",
+        str(cfg.train.steps),
+        "--batch-size",
+        str(cfg.train.batch_size),
+        "--lr",
+        str(cfg.train.lr),
+        "--chunk",
+        str(dcfg.chunk),
+        "--device",
+        cfg.train.device,
+        "--workers",
+        str(cfg.train.num_workers),
+        "--seed",
+        str(cfg.seed),
+        "--state-key",
+        cfg.state_key,
+        "--supervision",
+        dcfg.supervision,
+        "--credit",
+        dcfg.credit.value,
+        "--val-fraction",
+        str(cfg.train.val_fraction),
+        "--log-every",
+        str(cfg.train.log_every),
+        "--eval-every",
+        str(cfg.train.eval_every),
+        "--checkpoint-every",
+        str(cfg.train.checkpoint_every),
         "--quiet",
     ]
     if budget is not None:
@@ -218,16 +251,20 @@ def _pairwise(results: dict[str, Any]) -> list[dict[str, Any]]:
     names = list(results)
     out = []
     for i, a in enumerate(names):
-        for b in names[i + 1:]:
+        for b in names[i + 1 :]:
             ea, eb = results[a]["eval"], results[b]["eval"]
             lo_a, hi_a = ea["ci95_low"], ea["ci95_high"]
             lo_b, hi_b = eb["ci95_low"], eb["ci95_high"]
             overlap = not (hi_a < lo_b or hi_b < lo_a)
-            out.append({
-                "a": a, "b": b,
-                "success_a": ea["success_rate"], "success_b": eb["success_rate"],
-                "difference": ea["success_rate"] - eb["success_rate"],
-                "intervals_overlap": overlap,
-                "resolved": not overlap,
-            })
+            out.append(
+                {
+                    "a": a,
+                    "b": b,
+                    "success_a": ea["success_rate"],
+                    "success_b": eb["success_rate"],
+                    "difference": ea["success_rate"] - eb["success_rate"],
+                    "intervals_overlap": overlap,
+                    "resolved": not overlap,
+                }
+            )
     return out

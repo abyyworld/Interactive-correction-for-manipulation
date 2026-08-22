@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from tests.conftest import requires_assets
 
@@ -60,7 +59,7 @@ def test_objects_spawn_apart_and_off_the_goal(env):
         positions = [env.object_pos(s.name)[:2] for s in env.object_specs]
         for i, a in enumerate(positions):
             assert np.linalg.norm(a - env.goal_pos) > env.config.goal_radius
-            for b in positions[i + 1:]:
+            for b in positions[i + 1 :]:
                 assert np.linalg.norm(a - b) >= env.config.min_object_separation - 1e-6
 
 

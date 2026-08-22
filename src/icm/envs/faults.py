@@ -204,9 +204,10 @@ class FaultInjector:
 
         elif spec.type is FaultType.WEAK_GRIP:
             gid = env.robot.gripper_actuator_id
-            scale = self.WEAK_GRIP_FORCE_HI - (
-                self.WEAK_GRIP_FORCE_HI - self.WEAK_GRIP_FORCE_LO
-            ) * spec.severity
+            scale = (
+                self.WEAK_GRIP_FORCE_HI
+                - (self.WEAK_GRIP_FORCE_HI - self.WEAK_GRIP_FORCE_LO) * spec.severity
+            )
             # env.reset() has already restored the nominal range, so this scales
             # the true nominal value rather than an already-weakened one.
             env.model.actuator_forcerange[gid] = env._orig_gripper_forcerange * scale

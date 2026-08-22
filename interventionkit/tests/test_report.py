@@ -8,11 +8,18 @@ NAMES = ("approach", "grasp", "lift", "place")
 def _episodes(n=6):
     out = []
     for i in range(n):
-        seg = InterventionSegment(start=10, end=20, onset_phase=2, attributed_phase=0 if i < 2 else 2)
+        seg = InterventionSegment(
+            start=10, end=20, onset_phase=2, attributed_phase=0 if i < 2 else 2
+        )
         out.append(
             EpisodeMeta(
-                episode_id=f"e{i}", task="t", seed=i, n_steps=30, success=i % 2 == 0,
-                interventions=[seg], ground_truth={"root_phase": 0, "root_onset_step": 3},
+                episode_id=f"e{i}",
+                task="t",
+                seed=i,
+                n_steps=30,
+                success=i % 2 == 0,
+                interventions=[seg],
+                ground_truth={"root_phase": 0, "root_onset_step": 3},
             )
         )
     return out

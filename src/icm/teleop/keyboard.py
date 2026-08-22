@@ -89,8 +89,9 @@ class KeyboardTeleop:
             attribution = self._attribution
             self._reported = True
 
-        return TeleopCommand(action=action, engaged=engaged, attribution=attribution,
-                             abort=self._abort)
+        return TeleopCommand(
+            action=action, engaged=engaged, attribution=attribution, abort=self._abort
+        )
 
     def _draw(self, info: dict, engaged: bool) -> None:
         pg = self.pygame

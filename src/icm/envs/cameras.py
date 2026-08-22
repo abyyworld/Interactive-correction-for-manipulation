@@ -72,7 +72,9 @@ class CameraRig:
         self.stats.frames += 1
         return out
 
-    def render_single(self, data: mujoco.MjData, camera: str, width: int, height: int) -> np.ndarray:
+    def render_single(
+        self, data: mujoco.MjData, camera: str, width: int, height: int
+    ) -> np.ndarray:
         """One-off high-resolution RGB frame, for GIFs and figures.
 
         Allocates a renderer per call, so it is only for the handful of frames

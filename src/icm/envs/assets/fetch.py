@@ -58,7 +58,17 @@ def fetch(force: bool = False, quiet: bool = False) -> Path:
             ["git", "-C", str(tmp_path), "remote", "add", "origin", MENAGERIE_URL], check=True
         )
         subprocess.run(
-            ["git", "-C", str(tmp_path), "fetch", "--quiet", "--depth", "1", "origin", MENAGERIE_SHA],
+            [
+                "git",
+                "-C",
+                str(tmp_path),
+                "fetch",
+                "--quiet",
+                "--depth",
+                "1",
+                "origin",
+                MENAGERIE_SHA,
+            ],
             check=True,
         )
         subprocess.run(
@@ -93,7 +103,10 @@ def main(argv: list[str] | None = None) -> int:
         fetch(force=args.force, quiet=args.quiet)
     except Exception as exc:  # pragma: no cover - network/CLI failure path
         print(f"[assets] FAILED: {exc}", file=sys.stderr)
-        print("[assets] the simulator will fall back to primitive-geom robot visuals.", file=sys.stderr)
+        print(
+            "[assets] the simulator will fall back to primitive-geom robot visuals.",
+            file=sys.stderr,
+        )
         return 1
     return 0
 

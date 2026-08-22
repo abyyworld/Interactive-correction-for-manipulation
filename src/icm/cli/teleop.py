@@ -11,8 +11,12 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--device", default="keyboard", choices=["keyboard", "vr", "synthetic"])
     ap.add_argument("-n", "--episodes", type=int, default=10)
     ap.add_argument("--port", type=int, default=5555, help="UDP port for the VR client")
-    ap.add_argument("--position-scale", type=float, default=2.5,
-                    help="robot metres per metre of hand movement (VR only)")
+    ap.add_argument(
+        "--position-scale",
+        type=float,
+        default=2.5,
+        help="robot metres per metre of hand movement (VR only)",
+    )
     ap.add_argument("--agent", default="expert", choices=["expert", "faulty", "checkpoint"])
     ap.add_argument("--checkpoint", default=None)
     ap.add_argument("--fault", default="grasp_offset")
@@ -25,6 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     import numpy as np
+
     from interventionkit import InterventionRecorder
 
     from ..control.scripted import ScriptedExpert
@@ -52,7 +57,9 @@ def main(argv: list[str] | None = None) -> int:
         actor = "expert"
 
     recorder = InterventionRecorder(
-        args.out, task="pick_place", phase_names=("approach", "grasp", "lift", "place"),
+        args.out,
+        task="pick_place",
+        phase_names=("approach", "grasp", "lift", "place"),
         config={"device": args.device, "agent": args.agent},
     )
 
@@ -65,7 +72,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.agent == "faulty":
             rng = np.random.default_rng(seed)
             agent = ScriptedAgent(
-                ScriptedExpert(), FaultInjector(FaultSpec(type=FaultType(args.fault), severity=0.9), rng)
+                ScriptedExpert(),
+                FaultInjector(FaultSpec(type=FaultType(args.fault), severity=0.9), rng),
             )
         elif args.agent == "checkpoint":
             from ..policies.runner import PolicyAgent, RunnerConfig
@@ -76,10 +84,19 @@ def main(argv: list[str] | None = None) -> int:
             agent = ScriptedAgent()
 
         with recorder.episode(seed=seed, instruction=env.default_instruction()) as ep:
-            result = rollout(env, agent, supervisor=supervisor, recorder=ep, seed=seed,
-                             record_keys=tuple(keys), supervisor_actor=actor)
-        print(f"episode {i}: success={result.success} intervened={result.intervened} "
-              f"takeover={result.takeover_step} blamed={result.attribution}")
+            result = rollout(
+                env,
+                agent,
+                supervisor=supervisor,
+                recorder=ep,
+                seed=seed,
+                record_keys=tuple(keys),
+                supervisor_actor=actor,
+            )
+        print(
+            f"episode {i}: success={result.success} intervened={result.intervened} "
+            f"takeover={result.takeover_step} blamed={result.attribution}"
+        )
         if result.ground_truth.get("aborted"):
             break
 

@@ -1,5 +1,4 @@
 import pytest
-
 from interventionkit.schema import (
     SCHEMA_VERSION,
     EpisodeMeta,

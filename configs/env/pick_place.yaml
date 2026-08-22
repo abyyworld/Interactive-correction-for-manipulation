@@ -1,0 +1,20 @@
+# Default task configuration. Every field maps to icm.envs.pick_place.EnvConfig.
+image_size: 84          # 84 px is the standard for manipulation BC; 128 costs ~2.3x the storage
+cameras: [wrist, scene]
+use_depth: true
+render_images: true
+include_privileged: true
+
+control_hz: 20.0        # policy rate
+physics_dt: 0.002       # 500 Hz physics, 25 substeps per control step
+max_delta_pos: 0.035    # metres per step, so 0.7 m/s ceiling
+max_delta_rot: 0.18
+lock_roll_pitch: true   # top-down grasps; VR teleop can unlock this
+gravity_compensation: true
+
+max_episode_steps: 220
+n_distractors: 2
+randomize_objects: true
+min_object_separation: 0.11
+goal_radius: 0.06
+lift_height: 0.10

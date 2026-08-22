@@ -2,7 +2,6 @@ import json
 
 import numpy as np
 import pytest
-
 from interventionkit.store import RunReader, RunWriter
 
 PHASES = ("approach", "grasp", "lift", "place")
@@ -58,10 +57,10 @@ def test_frame_index_is_flat(tmp_path):
 
 
 def test_index_rebuild_when_missing(tmp_path):
-    r = _make_run(tmp_path, n_episodes=3)
+    reader = _make_run(tmp_path, n_episodes=3)
+    assert len(reader) == 3
     (tmp_path / "index.jsonl").unlink()
-    r2 = RunReader(tmp_path)
-    assert len(r2) == 3  # rebuilt from sidecars
+    assert len(RunReader(tmp_path)) == 3  # rebuilt from the per-episode sidecars
 
 
 def test_ragged_fields_are_rejected(tmp_path):

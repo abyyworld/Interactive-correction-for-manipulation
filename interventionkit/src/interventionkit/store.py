@@ -212,7 +212,9 @@ class RunWriter:
         self._index_path = self.root / INDEX_NAME
         self._counter = 0
 
-    def episode(self, seed: int, instruction: str = "", episode_id: str | None = None) -> EpisodeWriter:
+    def episode(
+        self, seed: int, instruction: str = "", episode_id: str | None = None
+    ) -> EpisodeWriter:
         if episode_id is None:
             episode_id = f"ep_{self._counter:06d}"
         self._counter += 1
@@ -237,7 +239,9 @@ class RunReader:
     def __init__(self, root: str | Path):
         self.root = Path(root)
         if not (self.root / RUN_META_NAME).is_file():
-            raise FileNotFoundError(f"{self.root} is not an interventionkit run (no {RUN_META_NAME})")
+            raise FileNotFoundError(
+                f"{self.root} is not an interventionkit run (no {RUN_META_NAME})"
+            )
         self.meta = RunMeta.from_dict(json.loads((self.root / RUN_META_NAME).read_text()))
         if self.meta.schema_version > SCHEMA_VERSION:
             raise ValueError(
@@ -281,7 +285,9 @@ class RunReader:
         """Lazy handle: members decompress only on access. Close it when done."""
         return np.load(self.episode_dir / f"{episode_id}.npz", allow_pickle=False)
 
-    def iter_arrays(self, keys: tuple[str, ...] | None = None) -> Iterator[tuple[EpisodeMeta, dict]]:
+    def iter_arrays(
+        self, keys: tuple[str, ...] | None = None
+    ) -> Iterator[tuple[EpisodeMeta, dict]]:
         """Stream episodes one at a time, optionally only selected fields."""
         for meta in self.episodes():
             with self.open(meta.episode_id) as z:

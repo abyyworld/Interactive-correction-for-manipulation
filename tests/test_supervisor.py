@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from tests.conftest import requires_assets
 
@@ -15,10 +14,12 @@ def test_supervisor_detects_and_rescues_failures(env):
     detected = rescued = 0
     n = 12
     for i in range(n):
-        injector = FaultInjector(FaultSpec(type=FaultType.WEAK_GRIP, severity=0.9),
-                                 np.random.default_rng(i))
-        result = rollout(env, ScriptedAgent(injector=injector), supervisor=supervisor,
-                         seed=9500 + i)
+        injector = FaultInjector(
+            FaultSpec(type=FaultType.WEAK_GRIP, severity=0.9), np.random.default_rng(i)
+        )
+        result = rollout(
+            env, ScriptedAgent(injector=injector), supervisor=supervisor, seed=9500 + i
+        )
         detected += int(result.intervened)
         rescued += int(result.success)
     assert detected == n
@@ -93,7 +94,14 @@ def test_detection_never_reads_the_injected_fault():
     names |= {n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)}
     # "spec" is deliberately absent: _detect iterates env.object_specs, which is
     # scene description, not privileged fault information.
-    forbidden = {"injector", "fault", "true_root_phase", "ground_truth", "root_phase",
-                 "root_onset_step", "symptom_phase"}
+    forbidden = {
+        "injector",
+        "fault",
+        "true_root_phase",
+        "ground_truth",
+        "root_phase",
+        "root_onset_step",
+        "symptom_phase",
+    }
     leaked = names & forbidden
     assert not leaked, f"_detect references privileged state: {leaked}"

@@ -15,7 +15,10 @@ class RunnerConfig:
     state_key: str = "privileged"
     device: str = "cpu"
     temporal_ensemble: bool = True
-    ensemble_decay: float = 0.35
+    #: Higher decay weights the newest prediction more. Measured on this task:
+    #: no ensembling 0/30, decay 0.35 -> 3/30, decay 1.5 -> 5/30. Blending helps,
+    #: but heavy smoothing lags the closed-loop controller it is imitating.
+    ensemble_decay: float = 1.5
     #: Gaussian exploration noise. Useful during DAgger collection: a perfectly
     #: deterministic policy visits a narrow state distribution and the supervisor
     #: never sees the failure modes worth correcting.
@@ -25,8 +28,12 @@ class RunnerConfig:
 class PolicyAgent:
     """Adapts :class:`BCPolicy` to the ``Agent`` protocol used by rollouts."""
 
-    def __init__(self, policy: BCPolicy, config: RunnerConfig | None = None,
-                 rng: np.random.Generator | None = None):
+    def __init__(
+        self,
+        policy: BCPolicy,
+        config: RunnerConfig | None = None,
+        rng: np.random.Generator | None = None,
+    ):
         self.policy = policy
         self.config = config or RunnerConfig()
         self.rng = rng or np.random.default_rng(0)

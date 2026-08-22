@@ -53,7 +53,7 @@ class EvalResult:
     def failure_breakdown(self) -> dict[str, int]:
         """Which phase failing episodes ended in - the actionable half of a result."""
         out: dict[str, int] = {}
-        for p, ok in zip(self.final_phases, self._success_flags()):
+        for p, ok in zip(self.final_phases, self._success_flags(), strict=False):
             if ok:
                 continue
             name = Phase(p).label
@@ -72,13 +72,15 @@ class EvalResult:
             "success_rate": self.success_rate,
             "ci95_low": lo,
             "ci95_high": hi,
-            "mean_episode_length": float(np.mean(self.episode_lengths)) if self.episode_lengths else float("nan"),
+            "mean_episode_length": float(np.mean(self.episode_lengths))
+            if self.episode_lengths
+            else float("nan"),
             "intervention_rate": self.interventions / self.n if self.n else float("nan"),
         }
 
     def __str__(self) -> str:
         lo, hi = self.ci
-        return f"{self.successes}/{self.n} = {100*self.success_rate:.1f}% [{100*lo:.1f}, {100*hi:.1f}]"
+        return f"{self.successes}/{self.n} = {100 * self.success_rate:.1f}% [{100 * lo:.1f}, {100 * hi:.1f}]"
 
 
 def evaluate_agent(env, agent, n_episodes: int = 50, seed: int = 0, supervisor=None) -> EvalResult:

@@ -68,22 +68,22 @@ def _bar_svg(labels: list[str], values: list[float], width: int = 820, height: i
     for gy in (0.0, 0.5, 1.0):
         y = pad_t + plot_h * (1 - gy)
         parts.append(
-            f'<line x1="{pad_l}" y1="{y:.1f}" x2="{width-12}" y2="{y:.1f}" stroke="#8884" stroke-width="1"/>'
+            f'<line x1="{pad_l}" y1="{y:.1f}" x2="{width - 12}" y2="{y:.1f}" stroke="#8884" stroke-width="1"/>'
         )
         parts.append(
-            f'<text x="{pad_l-6}" y="{y+4:.1f}" font-size="11" fill="currentColor" opacity=".6" text-anchor="end">{gy*vmax:.2f}</text>'
+            f'<text x="{pad_l - 6}" y="{y + 4:.1f}" font-size="11" fill="currentColor" opacity=".6" text-anchor="end">{gy * vmax:.2f}</text>'
         )
-    for i, (lab, v) in enumerate(zip(labels, values)):
+    for i, (lab, v) in enumerate(zip(labels, values, strict=False)):
         cx = pad_l + plot_w * (i + 0.5) / n
         h = plot_h * (v / vmax) if vmax else 0
         parts.append(
-            f'<rect x="{cx-bw/2:.1f}" y="{pad_t+plot_h-h:.1f}" width="{bw:.1f}" height="{h:.1f}" fill="#3b82f6" rx="3"/>'
+            f'<rect x="{cx - bw / 2:.1f}" y="{pad_t + plot_h - h:.1f}" width="{bw:.1f}" height="{h:.1f}" fill="#3b82f6" rx="3"/>'
         )
         parts.append(
-            f'<text x="{cx:.1f}" y="{pad_t+plot_h-h-5:.1f}" font-size="11" fill="currentColor" text-anchor="middle">{v:.2f}</text>'
+            f'<text x="{cx:.1f}" y="{pad_t + plot_h - h - 5:.1f}" font-size="11" fill="currentColor" text-anchor="middle">{v:.2f}</text>'
         )
         parts.append(
-            f'<text x="{cx:.1f}" y="{height-9}" font-size="11" fill="currentColor" opacity=".75" text-anchor="middle">{html.escape(lab)}</text>'
+            f'<text x="{cx:.1f}" y="{height - 9}" font-size="11" fill="currentColor" opacity=".75" text-anchor="middle">{html.escape(lab)}</text>'
         )
     parts.append("</svg>")
     return "".join(parts)
@@ -101,8 +101,12 @@ def _confusion_table(matrix: np.ndarray, names: list[str], caption: str) -> str:
         cells = []
         for j in range(n):
             cls = "diag" if i == j else ("off" if matrix[i, j] else "")
-            frac = f"<br><span style='opacity:.6;font-size:.8em'>{100*matrix[i,j]/total:.0f}%</span>" if total else ""
-            cells.append(f'<td class="num {cls}">{matrix[i,j]}{frac}</td>')
+            frac = (
+                f"<br><span style='opacity:.6;font-size:.8em'>{100 * matrix[i, j] / total:.0f}%</span>"
+                if total
+                else ""
+            )
+            cells.append(f'<td class="num {cls}">{matrix[i, j]}{frac}</td>')
         rows.append(f"<tr><th>{html.escape(names[i])}</th>{''.join(cells)}</tr>")
     return (
         f"<p class='sub'>{html.escape(caption)}</p>"
@@ -141,7 +145,7 @@ def build_report(
     bd_rows = "".join(
         f"<tr><td>{html.escape(names[p])}</td><td class='num'>{int(v['n'])}</td>"
         f"<td class='num'>{_pct(v['misattribution_rate'])}</td>"
-        f"<td class='num'>{_fmt(v['mean_detection_lag'],1)}</td></tr>"
+        f"<td class='num'>{_fmt(v['mean_detection_lag'], 1)}</td></tr>"
         for p, v in sorted(breakdown.items())
     )
     bd_table = (
@@ -156,9 +160,7 @@ def build_report(
         [breakdown[p]["misattribution_rate"] for p in sorted(breakdown)],
     )
 
-    extras = "".join(
-        f"<h2>{html.escape(t)}</h2>{body}" for t, body in (extra_sections or [])
-    )
+    extras = "".join(f"<h2>{html.escape(t)}</h2>{body}" for t, body in (extra_sections or []))
 
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">

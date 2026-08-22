@@ -256,7 +256,9 @@ class SyntheticSupervisor:
                 # the pattern that makes recency bias hard to filter out by
                 # thresholding on confidence.
                 blamed_symptom = phase == st.detected.phase
-                confidence = float(np.clip(self.rng.normal(0.75 if blamed_symptom else 0.55, 0.12), 0, 1))
+                confidence = float(
+                    np.clip(self.rng.normal(0.75 if blamed_symptom else 0.55, 0.12), 0, 1)
+                )
                 notes = st.detected.reason
             st.reported = True
 

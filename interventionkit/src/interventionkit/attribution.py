@@ -35,8 +35,9 @@ episode).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 
@@ -67,10 +68,7 @@ class AttributionSummary:
     phase_names: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        d = {
-            k: (v.tolist() if isinstance(v, np.ndarray) else v)
-            for k, v in self.__dict__.items()
-        }
+        d = {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in self.__dict__.items()}
         d["phase_names"] = list(self.phase_names)
         return d
 

@@ -62,11 +62,11 @@ from interventionkit import RunReader, analyse
 reader = RunReader("runs/session1")
 summary = analyse(reader.episodes(), n_phases=4)
 
-summary.onset_misattribution_rate   # intervened in the wrong phase
+summary.onset_misattribution_rate  # intervened in the wrong phase
 summary.stated_misattribution_rate  # reported the wrong phase
-summary.mean_detection_lag          # steps between true onset and takeover
-summary.mean_credit_iou             # overlap of corrected window with the truly-wrong window
-summary.late_intervention_rate      # took over after the point of no return
+summary.mean_detection_lag  # steps between true onset and takeover
+summary.mean_credit_iou  # overlap of corrected window with the truly-wrong window
+summary.late_intervention_rate  # took over after the point of no return
 ```
 
 Or from the terminal:

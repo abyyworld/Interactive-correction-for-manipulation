@@ -9,7 +9,9 @@ from pathlib import Path
 
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="icm-eval", description=__doc__.split("\n")[0])
-    ap.add_argument("--checkpoint", default=None, help="policy checkpoint; omit to evaluate the expert")
+    ap.add_argument(
+        "--checkpoint", default=None, help="policy checkpoint; omit to evaluate the expert"
+    )
     ap.add_argument("-n", "--episodes", type=int, default=100)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--device", default="cpu")
@@ -30,11 +32,16 @@ def main(argv: list[str] | None = None) -> int:
     from ..eval.metrics import evaluate_agent
     from ..eval.rollout import ScriptedAgent, rollout
 
-    need_images = bool(args.images) or args.gif
-    cameras = tuple({k.rsplit("_", 1)[0] for k in args.images} | ({args.gif_camera} if args.gif else set()))
+    cameras = tuple(
+        {k.rsplit("_", 1)[0] for k in args.images} | ({args.gif_camera} if args.gif else set())
+    )
     env = PickPlaceEnv(
-        EnvConfig(render_images=bool(args.images), cameras=cameras or ("wrist", "scene"),
-                  use_depth=False, image_size=args.image_size),
+        EnvConfig(
+            render_images=bool(args.images),
+            cameras=cameras or ("wrist", "scene"),
+            use_depth=False,
+            image_size=args.image_size,
+        ),
         seed=args.seed,
     )
 

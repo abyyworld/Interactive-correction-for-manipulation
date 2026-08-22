@@ -142,7 +142,9 @@ def rollout(
             supervisor.set_engage_callback(lambda: agent.on_supervisor_engage(env))
             engage_hook_installed = True
 
-    result = RolloutResult(episode_id=getattr(recorder, "_w", None) and recorder._w.episode_id or "")
+    result = RolloutResult(
+        episode_id=getattr(recorder, "_w", None) and recorder._w.episode_id or ""
+    )
     limit = max_steps or env.config.max_episode_steps
     was_engaged = False
 
@@ -179,8 +181,10 @@ def rollout(
 
         if recorder is not None:
             payload = {k: obs[k] for k in record_keys if k in obs}
-            method = recorder.policy_step if actor == "policy" else (
-                recorder.human_step if actor == "human" else recorder.expert_step
+            method = (
+                recorder.policy_step
+                if actor == "policy"
+                else (recorder.human_step if actor == "human" else recorder.expert_step)
             )
             method(action, phase=int(info["phase"]), **payload)
             if command is not None and command.attribution is not None and recorder.intervened:

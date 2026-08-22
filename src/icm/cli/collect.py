@@ -23,12 +23,19 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--image-size", type=int, default=84)
     ap.add_argument("--cameras", nargs="*", default=["wrist", "scene"])
     ap.add_argument("--depth", action="store_true")
-    ap.add_argument("--no-privileged", action="store_true",
-                    help="omit ground-truth object poses from the recording")
-    ap.add_argument("--only-successes", action="store_true",
-                    help="discard failed episodes instead of recording them")
-    ap.add_argument("--estimate-only", action="store_true",
-                    help="print the predicted dataset size and exit")
+    ap.add_argument(
+        "--no-privileged",
+        action="store_true",
+        help="omit ground-truth object poses from the recording",
+    )
+    ap.add_argument(
+        "--only-successes",
+        action="store_true",
+        help="discard failed episodes instead of recording them",
+    )
+    ap.add_argument(
+        "--estimate-only", action="store_true", help="print the predicted dataset size and exit"
+    )
     ap.add_argument("--quiet", action="store_true")
     return ap
 
@@ -40,17 +47,24 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.estimate_only or args.images:
         est = estimate_size(
-            args.episodes, steps_per_episode=80, image_size=args.image_size,
-            n_cameras=len(args.cameras) if args.images else 0, depth=args.depth,
+            args.episodes,
+            steps_per_episode=80,
+            image_size=args.image_size,
+            n_cameras=len(args.cameras) if args.images else 0,
+            depth=args.depth,
         )
-        msg = (f"[estimate] {args.episodes} episodes ~ {est['raw_gb']:.2f} GB raw / "
-               f"{est['compressed_gb']:.2f} GB compressed ({est['frames']:,.0f} frames)")
+        msg = (
+            f"[estimate] {args.episodes} episodes ~ {est['raw_gb']:.2f} GB raw / "
+            f"{est['compressed_gb']:.2f} GB compressed ({est['frames']:,.0f} frames)"
+        )
         if not args.quiet:
             print(msg)
         if args.estimate_only:
             return 0
         if est["compressed_gb"] > 100:
-            print("[estimate] refusing: over 100 GB. Lower --episodes, --image-size, or drop --depth.")
+            print(
+                "[estimate] refusing: over 100 GB. Lower --episodes, --image-size, or drop --depth."
+            )
             return 2
 
     from interventionkit import InterventionRecorder
@@ -79,7 +93,8 @@ def main(argv: list[str] | None = None) -> int:
                 keys.append(f"{cam}_depth")
 
     recorder = InterventionRecorder(
-        args.out, task="pick_place",
+        args.out,
+        task="pick_place",
         phase_names=("approach", "grasp", "lift", "place"),
         config={"source": "scripted_expert", "images": args.images, "seed": args.seed},
     )
@@ -96,16 +111,29 @@ def main(argv: list[str] | None = None) -> int:
             if not probe.success:
                 continue
         with recorder.episode(seed=seed, instruction=env.default_instruction()) as ep:
-            result = rollout(env, agent, recorder=ep, seed=seed, record_keys=tuple(keys),
-                             record_agent_as="expert")
+            result = rollout(
+                env,
+                agent,
+                recorder=ep,
+                seed=seed,
+                record_keys=tuple(keys),
+                record_agent_as="expert",
+            )
         n_success += int(result.success)
         if not args.quiet and (i + 1) % 50 == 0:
-            print(f"  [{i+1}/{args.episodes}] success {n_success}/{i+1} "
-                  f"({(time.time()-t0)/(i+1):.2f} s/ep)", flush=True)
+            print(
+                f"  [{i + 1}/{args.episodes}] success {n_success}/{i + 1} "
+                f"({(time.time() - t0) / (i + 1):.2f} s/ep)",
+                flush=True,
+            )
 
     env.close()
-    summary = {"episodes": args.episodes, "successes": n_success,
-               "seconds": time.time() - t0, "out": str(args.out)}
+    summary = {
+        "episodes": args.episodes,
+        "successes": n_success,
+        "seconds": time.time() - t0,
+        "out": str(args.out),
+    }
     Path(args.out, "collect.json").write_text(json.dumps(summary, indent=2))
     if not args.quiet:
         print(json.dumps(summary, indent=2))

@@ -199,7 +199,11 @@ class ScriptedExpert:
             wp = np.array([grasp_point[0], grasp_point[1], obj[2] + cfg.hover_height])
             action = self._goto(env, wp, yaw, 1.0)
             aligned = np.linalg.norm(tcp[:2] - wp[:2]) < cfg.xy_tol
-            if aligned and abs(tcp[2] - wp[2]) < cfg.pos_tol and abs(wrap_to_quarter(yaw - getattr(env, "_yaw", 0.0))) < cfg.yaw_tol:
+            if (
+                aligned
+                and abs(tcp[2] - wp[2]) < cfg.pos_tol
+                and abs(wrap_to_quarter(yaw - getattr(env, "_yaw", 0.0))) < cfg.yaw_tol
+            ):
                 self._advance(Stage.DESCEND)
             return action
 

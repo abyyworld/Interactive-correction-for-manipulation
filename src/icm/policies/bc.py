@@ -21,7 +21,7 @@ multi-gigabyte image dataset trainable on an 8 GB card.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -68,9 +68,7 @@ class SpatialSoftmax(nn.Module):
     def __init__(self, channels: int, height: int, width: int):
         super().__init__()
         self.channels = channels
-        pos_x, pos_y = np.meshgrid(
-            np.linspace(-1.0, 1.0, width), np.linspace(-1.0, 1.0, height)
-        )
+        pos_x, pos_y = np.meshgrid(np.linspace(-1.0, 1.0, width), np.linspace(-1.0, 1.0, height))
         self.register_buffer("pos_x", torch.from_numpy(pos_x.reshape(-1)).float())
         self.register_buffer("pos_y", torch.from_numpy(pos_y.reshape(-1)).float())
 
@@ -97,9 +95,12 @@ def build_backbone(name: str, pretrained: bool) -> tuple[nn.Module, int]:
     if name == "small":
         # Compact CNN for smoke tests and CPU-only runs.
         net = nn.Sequential(
-            nn.Conv2d(3, 32, 5, 2, 2), nn.ReLU(inplace=True),
-            nn.Conv2d(32, 64, 3, 2, 1), nn.ReLU(inplace=True),
-            nn.Conv2d(64, 128, 3, 2, 1), nn.ReLU(inplace=True),
+            nn.Conv2d(3, 32, 5, 2, 2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 64, 3, 2, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 128, 3, 2, 1),
+            nn.ReLU(inplace=True),
         )
         return net, 128
 
@@ -181,6 +182,28 @@ class BCPolicy(nn.Module):
 
         self.register_buffer("img_mean", torch.tensor(IMAGENET_MEAN).view(1, 3, 1, 1))
         self.register_buffer("img_std", torch.tensor(IMAGENET_STD).view(1, 3, 1, 1))
+        # Proprioceptive/state inputs are raw physical quantities on wildly
+        # different scales - joint angles near 3 rad beside object heights near
+        # 0.02 m - and several dimensions are near-constant. Feeding that to an
+        # MLP unnormalised conditions the problem badly enough that the policy
+        # does not learn the task at all. Registered as buffers so the statistics
+        # travel with the checkpoint and inference cannot silently disagree with
+        # training.
+        self.register_buffer("state_mean", torch.zeros(config.state_dim))
+        self.register_buffer("state_std", torch.ones(config.state_dim))
+
+    def set_normalization(self, mean, std, min_std: float = 1e-2) -> None:
+        """Install input statistics. ``min_std`` prevents amplifying constant dims.
+
+        Ten of the twenty-seven state dimensions here barely vary (a fixed goal
+        position, near-identity object quaternions). Dividing those by their true
+        standard deviation turns numerical noise into a large input, so the
+        deviation is floored.
+        """
+        mean = torch.as_tensor(np.asarray(mean), dtype=torch.float32)
+        std = torch.as_tensor(np.asarray(std), dtype=torch.float32).clamp(min=min_std)
+        self.state_mean.copy_(mean)
+        self.state_std.copy_(std)
 
     def encode_image(self, key: str, image: torch.Tensor) -> torch.Tensor:
         if image.dtype == torch.uint8:
@@ -191,7 +214,8 @@ class BCPolicy(nn.Module):
         return self.pools[key](self.backbones[key](image))
 
     def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
-        feats = [self.state_encoder(batch["state"])]
+        state = (batch["state"] - self.state_mean) / self.state_std
+        feats = [self.state_encoder(state)]
         for key in self.config.image_keys:
             feats.append(self.encode_image(key, batch[key]))
         x = torch.cat(feats, dim=-1)
@@ -213,7 +237,14 @@ class BCPolicy(nn.Module):
         valid = batch["action_valid"].unsqueeze(-1)
         weight = batch.get("weight")
         per_elem = F.l1_loss(pred, target, reduction="none") * valid
-        per_sample = per_elem.sum(dim=(1, 2)) / valid.sum(dim=(1, 2)).clamp(min=1.0)
+        # Divide by the number of summed *elements*, not the number of valid
+        # timesteps: `valid` is (B, T, 1) while `per_elem` is (B, T, A), so using
+        # valid.sum() alone reports action_dim times the true mean absolute
+        # error. That does not change the gradient direction, but it makes the
+        # logged loss incomparable to any baseline - it read 0.55 when the true
+        # error was 0.078, which looked like a policy that had learned nothing.
+        n_elem = valid.sum(dim=(1, 2)).clamp(min=1.0) * pred.shape[-1]
+        per_sample = per_elem.sum(dim=(1, 2)) / n_elem
         if weight is not None:
             loss = (per_sample * weight).sum() / weight.sum().clamp(min=1e-6)
         else:
@@ -242,10 +273,24 @@ class TemporalEnsemble:
     average would.
     """
 
-    def __init__(self, chunk: int, action_dim: int = 7, decay: float = 0.35):
+    #: Action indices excluded from blending. The gripper command is effectively
+    #: binary (measured std 0.999 on expert data, 24% of actions saturated), so
+    #: averaging eight predictions of it produces a half-closed gripper that
+    #: never actually grasps. Continuous position and yaw terms benefit from
+    #: smoothing; a discrete open/close decision does not.
+    DISCRETE_DIMS = (6,)
+
+    def __init__(
+        self,
+        chunk: int,
+        action_dim: int = 7,
+        decay: float = 0.35,
+        discrete_dims: tuple[int, ...] | None = None,
+    ):
         self.chunk = chunk
         self.action_dim = action_dim
         self.decay = decay
+        self.discrete_dims = self.DISCRETE_DIMS if discrete_dims is None else discrete_dims
         self.reset()
 
     def reset(self) -> None:
@@ -262,5 +307,11 @@ class TemporalEnsemble:
             w = float(np.exp(-self.decay * age))
             num += w * pred[age]
             den += w
+        blended = num / max(den, 1e-8)
+        # Discrete dimensions take the newest prediction rather than an average.
+        newest = self._buffer[-1][1][0]
+        for d in self.discrete_dims:
+            if d < self.action_dim:
+                blended[d] = newest[d]
         self._t += 1
-        return num / max(den, 1e-8)
+        return blended

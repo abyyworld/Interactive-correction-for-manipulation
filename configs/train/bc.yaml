@@ -1,0 +1,26 @@
+# Behaviour cloning. Sized for an 8 GB GPU.
+policy:
+  backbone: resnet18
+  pretrained: false       # set true on a networked machine for ImageNet weights
+  image_keys: [wrist_rgb, scene_rgb]
+  image_size: 84
+  chunk: 8                # action chunking; the single biggest win for BC here
+  hidden: [512, 512]
+  dropout: 0.1
+
+data:
+  supervision: corrections
+  credit: onset
+  state_key: proprio      # "privileged" gives a state-based upper bound
+  cache_size: 32          # open shards; 32 x ~5 MB image episodes
+
+train:
+  steps: 20000
+  batch_size: 64          # 64 at 84 px with resnet18 uses about 3 GB
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  warmup_steps: 500
+  num_workers: 2
+  val_fraction: 0.1
+  checkpoint_every: 1000
+  amp: true

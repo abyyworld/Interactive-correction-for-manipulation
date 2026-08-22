@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import math
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -76,7 +76,9 @@ class TorchFrames(Dataset):
         return out
 
 
-def episode_split(base: InterventionDataset, val_fraction: float, seed: int) -> tuple[np.ndarray, np.ndarray]:
+def episode_split(
+    base: InterventionDataset, val_fraction: float, seed: int
+) -> tuple[np.ndarray, np.ndarray]:
     """Split indices by episode so no episode contributes to both sides."""
     episodes = sorted({(ri, eid) for ri, eid, _, _ in base.samples})
     rng = np.random.default_rng(seed)
@@ -144,8 +146,12 @@ def train_bc(
     # Workers each hold their own shard cache, so keep the count modest: this is
     # a memory-bound pipeline, not a CPU-bound one.
     loader = DataLoader(
-        train_ds, batch_size=cfg.batch_size, shuffle=True, num_workers=cfg.num_workers,
-        drop_last=len(train_ds) > cfg.batch_size, pin_memory=device.type == "cuda",
+        train_ds,
+        batch_size=cfg.batch_size,
+        shuffle=True,
+        num_workers=cfg.num_workers,
+        drop_last=len(train_ds) > cfg.batch_size,
+        pin_memory=device.type == "cuda",
         persistent_workers=cfg.num_workers > 0,
     )
     val_loader = (
@@ -154,7 +160,10 @@ def train_bc(
         else None
     )
 
-    policy = BCPolicy(pcfg).to(device)
+    policy = BCPolicy(pcfg)
+    state_mean, state_std = base.state_stats()
+    policy.set_normalization(state_mean, state_std)
+    policy = policy.to(device)
     if cfg.compile and hasattr(torch, "compile"):
         policy = torch.compile(policy)
     opt = torch.optim.AdamW(policy.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
@@ -175,12 +184,21 @@ def train_bc(
     (out_dir / "config.json").write_text(
         json.dumps(
             {
-                "policy": {**asdict(pcfg), "image_keys": list(pcfg.image_keys), "vocab": list(pcfg.vocab)},
-                "data": {**asdict(dcfg), "credit": dcfg.credit.value, "image_keys": list(dcfg.image_keys)},
+                "policy": {
+                    **asdict(pcfg),
+                    "image_keys": list(pcfg.image_keys),
+                    "vocab": list(pcfg.vocab),
+                },
+                "data": {
+                    **asdict(dcfg),
+                    "credit": dcfg.credit.value,
+                    "image_keys": list(dcfg.image_keys),
+                },
                 "train": asdict(cfg),
                 "dataset": base.summary(),
             },
-            indent=2, default=str,
+            indent=2,
+            default=str,
         )
     )
 
@@ -211,13 +229,18 @@ def train_bc(
 
         if (step + 1) % cfg.log_every == 0:
             rec = {
-                "step": step + 1, "loss": float(np.mean(running)), "lr": lr_at(step, cfg),
-                "elapsed_s": time.time() - t0, "pos_l1": metrics["pos_l1"],
+                "step": step + 1,
+                "loss": float(np.mean(running)),
+                "lr": lr_at(step, cfg),
+                "elapsed_s": time.time() - t0,
+                "pos_l1": metrics["pos_l1"],
                 "gripper_l1": metrics["gripper_l1"],
             }
             logger.log(rec)
             if progress:
-                print(f"  step {step+1:>6}  loss {rec['loss']:.4f}  lr {rec['lr']:.2e}", flush=True)
+                print(
+                    f"  step {step + 1:>6}  loss {rec['loss']:.4f}  lr {rec['lr']:.2e}", flush=True
+                )
             running = []
 
         if val_loader is not None and (step + 1) % cfg.eval_every == 0:
@@ -225,21 +248,31 @@ def train_bc(
             logger.log({"step": step + 1, "val_loss": val})
             best_val = min(best_val, val)
             if progress:
-                print(f"  step {step+1:>6}  val {val:.4f}", flush=True)
+                print(f"  step {step + 1:>6}  val {val:.4f}", flush=True)
             policy.train()
 
         if (step + 1) % cfg.checkpoint_every == 0 or step + 1 == cfg.steps:
             torch.save(
-                {"policy": policy.state_dict(), "optimizer": opt.state_dict(),
-                 "step": step + 1, "policy_config": asdict(pcfg)},
+                {
+                    "policy": policy.state_dict(),
+                    "optimizer": opt.state_dict(),
+                    "step": step + 1,
+                    "policy_config": asdict(pcfg),
+                },
                 ckpt_path,
             )
 
-    final_val = evaluate_loss(policy, val_loader, device) if val_loader is not None else float("nan")
+    final_val = (
+        evaluate_loss(policy, val_loader, device) if val_loader is not None else float("nan")
+    )
     summary = {
-        "steps": cfg.steps, "final_val_loss": final_val, "best_val_loss": best_val,
-        "train_frames": len(train_ds), "val_frames": len(val_ds) if val_ds else 0,
-        "dataset": base.summary(), "device": str(device),
+        "steps": cfg.steps,
+        "final_val_loss": final_val,
+        "best_val_loss": best_val,
+        "train_frames": len(train_ds),
+        "val_frames": len(val_ds) if val_ds else 0,
+        "dataset": base.summary(),
+        "device": str(device),
         "wall_time_s": time.time() - t0,
     }
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2, default=float))
@@ -262,10 +295,14 @@ def evaluate_loss(policy, loader, device) -> float:
 def load_policy(checkpoint: str | Path, device: str | torch.device = "cpu") -> BCPolicy:
     """Rebuild a policy from a checkpoint, config included."""
     state = torch.load(checkpoint, map_location=device, weights_only=False)
-    cfg = PolicyConfig(**{**state["policy_config"],
-                          "image_keys": tuple(state["policy_config"]["image_keys"]),
-                          "vocab": tuple(state["policy_config"].get("vocab", ())),
-                          "hidden": tuple(state["policy_config"]["hidden"])})
+    cfg = PolicyConfig(
+        **{
+            **state["policy_config"],
+            "image_keys": tuple(state["policy_config"]["image_keys"]),
+            "vocab": tuple(state["policy_config"].get("vocab", ())),
+            "hidden": tuple(state["policy_config"]["hidden"]),
+        }
+    )
     policy = BCPolicy(cfg)
     policy.load_state_dict(state["policy"])
     policy.to(device).eval()

@@ -21,9 +21,13 @@ def _load(root: str) -> RunReader:
 
 
 def report_main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="ik-report", description="Build an intervention report from a run.")
+    ap = argparse.ArgumentParser(
+        prog="ik-report", description="Build an intervention report from a run."
+    )
     ap.add_argument("run", help="run directory containing run.json")
-    ap.add_argument("-o", "--out", default=None, help="output path (.html or .md); default <run>/report.html")
+    ap.add_argument(
+        "-o", "--out", default=None, help="output path (.html or .md); default <run>/report.html"
+    )
     ap.add_argument("--json", default=None, help="also write the raw summary as JSON")
     ap.add_argument("--title", default=None)
     args = ap.parse_args(argv)
@@ -65,21 +69,29 @@ def inspect_main(argv: list[str] | None = None) -> int:
         print(json.dumps({"stats": stats, "attribution": summary.to_dict()}, indent=2))
         return 0
 
-    print(f"run       : {reader.meta.run_id}  (task={reader.meta.task}, schema v{reader.meta.schema_version})")
+    print(
+        f"run       : {reader.meta.run_id}  (task={reader.meta.task}, schema v{reader.meta.schema_version})"
+    )
     print(f"created   : {reader.meta.created_utc}")
     for k, v in stats.items():
         print(f"  {k:<22} {v:.4f}" if isinstance(v, float) else f"  {k:<22} {v}")
     print("attribution:")
     print(f"  onset misattribution   {summary.onset_misattribution_rate:.3f}")
-    print(f"  stated misattribution  {summary.stated_misattribution_rate:.3f} (n={summary.n_stated})")
+    print(
+        f"  stated misattribution  {summary.stated_misattribution_rate:.3f} (n={summary.n_stated})"
+    )
     print(f"  mean detection lag     {summary.mean_detection_lag:.1f} steps")
     print(f"  mean credit IoU        {summary.mean_credit_iou:.3f}")
 
     if args.episodes:
         print(f"\nfirst {args.episodes} episodes:")
         for ep in reader.episodes()[: args.episodes]:
-            segs = ", ".join(f"{s.start}-{s.end}@{s.onset_phase_name or s.onset_phase}" for s in ep.interventions)
-            print(f"  {ep.episode_id}  steps={ep.n_steps:<4} success={str(ep.success):<5} interventions=[{segs}]")
+            segs = ", ".join(
+                f"{s.start}-{s.end}@{s.onset_phase_name or s.onset_phase}" for s in ep.interventions
+            )
+            print(
+                f"  {ep.episode_id}  steps={ep.n_steps:<4} success={str(ep.success):<5} interventions=[{segs}]"
+            )
     return 0
 
 

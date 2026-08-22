@@ -112,7 +112,8 @@ def solve_ik(
     converged = False
     pos_err = rot_err = np.inf
     it = 0
-    for it in range(1, max_iters + 1):
+    # `it` is read after the loop to report the iteration count.
+    for it in range(1, max_iters + 1):  # noqa: B007
         mujoco.mj_kinematics(model, data)
         mujoco.mj_comPos(model, data)
 
