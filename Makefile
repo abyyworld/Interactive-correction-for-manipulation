@@ -87,6 +87,11 @@ sweep: ## Sweep supervisor tracing accuracy
 degradation: ## Measure what misattribution costs the trained policy
 	$(BIN)/python -m icm.cli.dagger -o $(RUNS)/degradation --collect 150 --eval 150 --device $(DEVICE)
 
+.PHONY: degradation-controlled
+degradation-controlled: ## Same, with a shared demo pool so coverage is held fixed
+	$(BIN)/python -m icm.cli.dagger -o $(RUNS)/degradation_controlled \
+		--collect 200 --eval 250 --shared-demos 150 --device $(DEVICE)
+
 .PHONY: demos
 demos: ## Collect scripted demonstrations (add IMAGES=1 for camera data)
 	$(BIN)/python -m icm.cli.collect -o $(RUNS)/demos -n $(EPISODES) $(if $(IMAGES),--images --depth,)

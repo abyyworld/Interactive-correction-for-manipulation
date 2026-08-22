@@ -1,0 +1,1132 @@
+{
+  "0.0": {
+    "config": {
+      "episodes_per_fault": 18,
+      "faults": [
+        "grasp_offset",
+        "premature_close",
+        "weak_grip",
+        "lift_slip",
+        "early_release",
+        "wrong_object"
+      ],
+      "control_episodes": 6,
+      "severity": 0.9,
+      "trace_accuracy": 0.0,
+      "seed": 0,
+      "record_keys": [
+        "proprio"
+      ],
+      "render_images": false,
+      "supervisor": {
+        "reaction_mean": 6.0,
+        "reaction_std": 3.0,
+        "max_reaction": 40,
+        "detection_prob": 0.95,
+        "trace_accuracy": 0.35,
+        "report_prob": 1.0,
+        "stall_patience": 120,
+        "stall_motion_eps": 0.012,
+        "stall_motion_window": 20,
+        "hold_until_end": true,
+        "min_takeover_steps": 25
+      },
+      "expert": {
+        "hover_height": 0.1,
+        "grasp_z_offset": 0.002,
+        "lift_height": 0.18,
+        "place_clearance": 0.012,
+        "pos_gain": 0.8,
+        "yaw_gain": 0.8,
+        "pos_tol": 0.006,
+        "xy_tol": 0.004,
+        "yaw_tol": 0.08,
+        "close_steps": 12,
+        "release_steps": 8,
+        "stage_timeout": 90,
+        "noise_std": 0.0
+      }
+    },
+    "run_stats": {
+      "episodes": 114,
+      "success_rate": 0.7719298245614035,
+      "intervened_episodes": 103,
+      "intervention_rate": 0.9035087719298246,
+      "total_steps": 15767,
+      "corrected_steps": 7913,
+      "corrected_fraction": 0.5018709963848544,
+      "mean_episode_length": 138.30701754385964
+    },
+    "attribution": {
+      "n_episodes": 114,
+      "n_with_intervention": 103,
+      "n_with_ground_truth": 103,
+      "onset_misattribution_rate": 0.7378640776699029,
+      "stated_misattribution_rate": 0.4077669902912621,
+      "n_stated": 103,
+      "mean_detection_lag": 33.300970873786405,
+      "median_detection_lag": 22.0,
+      "mean_credit_iou": 0.7310507491205276,
+      "late_intervention_rate": NaN,
+      "onset_confusion": [
+        [
+          27,
+          14,
+          10,
+          0
+        ],
+        [
+          16,
+          0,
+          1,
+          0
+        ],
+        [
+          18,
+          0,
+          0,
+          0
+        ],
+        [
+          17,
+          0,
+          0,
+          0
+        ]
+      ],
+      "stated_confusion": [
+        [
+          26,
+          5,
+          20,
+          0
+        ],
+        [
+          0,
+          0,
+          17,
+          0
+        ],
+        [
+          0,
+          0,
+          18,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          17
+        ]
+      ],
+      "phase_names": [
+        "approach",
+        "grasp",
+        "lift",
+        "place"
+      ]
+    },
+    "per_root_phase": {
+      "0": {
+        "n": 51.0,
+        "misattribution_rate": 0.47058823529411764,
+        "mean_detection_lag": 52.470588235294116
+      },
+      "1": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 23.705882352941178
+      },
+      "2": {
+        "n": 18.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 11.11111111111111
+      },
+      "3": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 8.882352941176471
+      }
+    },
+    "by_lag_class": {
+      "delayed": {
+        "n": 34.0,
+        "onset_misattribution_rate": 0.7647058823529411,
+        "symptom_misattribution_rate": 0.8529411764705882,
+        "stated_misattribution_rate": 0.8529411764705882,
+        "mean_detection_lag": 51.705882352941174
+      },
+      "immediate": {
+        "n": 35.0,
+        "onset_misattribution_rate": 1.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 10.028571428571428
+      },
+      "short": {
+        "n": 18.0,
+        "onset_misattribution_rate": 0.8333333333333334,
+        "symptom_misattribution_rate": 0.7222222222222222,
+        "stated_misattribution_rate": 0.7222222222222222,
+        "mean_detection_lag": 31.555555555555557
+      },
+      "very_delayed": {
+        "n": 16.0,
+        "onset_misattribution_rate": 0.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 47.0625
+      }
+    },
+    "per_fault": {
+      "grasp_offset": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.7222222222222222,
+        "mean_takeover_step": 79.70588235294117
+      },
+      "premature_close": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.4444444444444444,
+        "mean_takeover_step": 65.77777777777777
+      },
+      "weak_grip": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8888888888888888,
+        "mean_takeover_step": 47.94117647058823
+      },
+      "lift_slip": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 55.27777777777778
+      },
+      "early_release": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.9444444444444444,
+        "mean_takeover_step": 52.470588235294116
+      },
+      "wrong_object": {
+        "n": 18,
+        "detection_rate": 0.8888888888888888,
+        "success_rate_with_correction": 0.7222222222222222,
+        "mean_takeover_step": 47.0625
+      },
+      "none": {
+        "n": 6,
+        "detection_rate": 0.0,
+        "success_rate_with_correction": 1.0,
+        "mean_takeover_step": NaN
+      }
+    },
+    "unnecessary_intervention_rate": 0.0
+  },
+  "0.25": {
+    "config": {
+      "episodes_per_fault": 18,
+      "faults": [
+        "grasp_offset",
+        "premature_close",
+        "weak_grip",
+        "lift_slip",
+        "early_release",
+        "wrong_object"
+      ],
+      "control_episodes": 6,
+      "severity": 0.9,
+      "trace_accuracy": 0.25,
+      "seed": 0,
+      "record_keys": [
+        "proprio"
+      ],
+      "render_images": false,
+      "supervisor": {
+        "reaction_mean": 6.0,
+        "reaction_std": 3.0,
+        "max_reaction": 40,
+        "detection_prob": 0.95,
+        "trace_accuracy": 0.35,
+        "report_prob": 1.0,
+        "stall_patience": 120,
+        "stall_motion_eps": 0.012,
+        "stall_motion_window": 20,
+        "hold_until_end": true,
+        "min_takeover_steps": 25
+      },
+      "expert": {
+        "hover_height": 0.1,
+        "grasp_z_offset": 0.002,
+        "lift_height": 0.18,
+        "place_clearance": 0.012,
+        "pos_gain": 0.8,
+        "yaw_gain": 0.8,
+        "pos_tol": 0.006,
+        "xy_tol": 0.004,
+        "yaw_tol": 0.08,
+        "close_steps": 12,
+        "release_steps": 8,
+        "stage_timeout": 90,
+        "noise_std": 0.0
+      }
+    },
+    "run_stats": {
+      "episodes": 114,
+      "success_rate": 0.7894736842105263,
+      "intervened_episodes": 103,
+      "intervention_rate": 0.9035087719298246,
+      "total_steps": 15628,
+      "corrected_steps": 7976,
+      "corrected_fraction": 0.5103660097261326,
+      "mean_episode_length": 137.08771929824562
+    },
+    "attribution": {
+      "n_episodes": 114,
+      "n_with_intervention": 103,
+      "n_with_ground_truth": 103,
+      "onset_misattribution_rate": 0.7572815533980582,
+      "stated_misattribution_rate": 0.27184466019417475,
+      "n_stated": 103,
+      "mean_detection_lag": 31.339805825242717,
+      "median_detection_lag": 22.0,
+      "mean_credit_iou": 0.7387103429734652,
+      "late_intervention_rate": NaN,
+      "onset_confusion": [
+        [
+          25,
+          16,
+          10,
+          0
+        ],
+        [
+          16,
+          0,
+          1,
+          0
+        ],
+        [
+          18,
+          0,
+          0,
+          0
+        ],
+        [
+          17,
+          0,
+          0,
+          0
+        ]
+      ],
+      "stated_confusion": [
+        [
+          35,
+          3,
+          13,
+          0
+        ],
+        [
+          0,
+          5,
+          12,
+          0
+        ],
+        [
+          0,
+          0,
+          18,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          17
+        ]
+      ],
+      "phase_names": [
+        "approach",
+        "grasp",
+        "lift",
+        "place"
+      ]
+    },
+    "per_root_phase": {
+      "0": {
+        "n": 51.0,
+        "misattribution_rate": 0.5098039215686274,
+        "mean_detection_lag": 48.509803921568626
+      },
+      "1": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 23.705882352941178
+      },
+      "2": {
+        "n": 18.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 11.11111111111111
+      },
+      "3": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 8.882352941176471
+      }
+    },
+    "by_lag_class": {
+      "delayed": {
+        "n": 34.0,
+        "onset_misattribution_rate": 0.8235294117647058,
+        "symptom_misattribution_rate": 0.9117647058823529,
+        "stated_misattribution_rate": 0.5882352941176471,
+        "mean_detection_lag": 45.76470588235294
+      },
+      "immediate": {
+        "n": 35.0,
+        "onset_misattribution_rate": 1.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 10.028571428571428
+      },
+      "short": {
+        "n": 18.0,
+        "onset_misattribution_rate": 0.8333333333333334,
+        "symptom_misattribution_rate": 0.7222222222222222,
+        "stated_misattribution_rate": 0.4444444444444444,
+        "mean_detection_lag": 31.555555555555557
+      },
+      "very_delayed": {
+        "n": 16.0,
+        "onset_misattribution_rate": 0.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 47.0625
+      }
+    },
+    "per_fault": {
+      "grasp_offset": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 67.82352941176471
+      },
+      "premature_close": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.4444444444444444,
+        "mean_takeover_step": 65.77777777777777
+      },
+      "weak_grip": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8888888888888888,
+        "mean_takeover_step": 47.94117647058823
+      },
+      "lift_slip": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 55.27777777777778
+      },
+      "early_release": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.9444444444444444,
+        "mean_takeover_step": 52.470588235294116
+      },
+      "wrong_object": {
+        "n": 18,
+        "detection_rate": 0.8888888888888888,
+        "success_rate_with_correction": 0.7222222222222222,
+        "mean_takeover_step": 47.0625
+      },
+      "none": {
+        "n": 6,
+        "detection_rate": 0.0,
+        "success_rate_with_correction": 1.0,
+        "mean_takeover_step": NaN
+      }
+    },
+    "unnecessary_intervention_rate": 0.0
+  },
+  "0.5": {
+    "config": {
+      "episodes_per_fault": 18,
+      "faults": [
+        "grasp_offset",
+        "premature_close",
+        "weak_grip",
+        "lift_slip",
+        "early_release",
+        "wrong_object"
+      ],
+      "control_episodes": 6,
+      "severity": 0.9,
+      "trace_accuracy": 0.5,
+      "seed": 0,
+      "record_keys": [
+        "proprio"
+      ],
+      "render_images": false,
+      "supervisor": {
+        "reaction_mean": 6.0,
+        "reaction_std": 3.0,
+        "max_reaction": 40,
+        "detection_prob": 0.95,
+        "trace_accuracy": 0.35,
+        "report_prob": 1.0,
+        "stall_patience": 120,
+        "stall_motion_eps": 0.012,
+        "stall_motion_window": 20,
+        "hold_until_end": true,
+        "min_takeover_steps": 25
+      },
+      "expert": {
+        "hover_height": 0.1,
+        "grasp_z_offset": 0.002,
+        "lift_height": 0.18,
+        "place_clearance": 0.012,
+        "pos_gain": 0.8,
+        "yaw_gain": 0.8,
+        "pos_tol": 0.006,
+        "xy_tol": 0.004,
+        "yaw_tol": 0.08,
+        "close_steps": 12,
+        "release_steps": 8,
+        "stage_timeout": 90,
+        "noise_std": 0.0
+      }
+    },
+    "run_stats": {
+      "episodes": 114,
+      "success_rate": 0.7894736842105263,
+      "intervened_episodes": 103,
+      "intervention_rate": 0.9035087719298246,
+      "total_steps": 15628,
+      "corrected_steps": 7976,
+      "corrected_fraction": 0.5103660097261326,
+      "mean_episode_length": 137.08771929824562
+    },
+    "attribution": {
+      "n_episodes": 114,
+      "n_with_intervention": 103,
+      "n_with_ground_truth": 103,
+      "onset_misattribution_rate": 0.7572815533980582,
+      "stated_misattribution_rate": 0.17475728155339806,
+      "n_stated": 103,
+      "mean_detection_lag": 31.339805825242717,
+      "median_detection_lag": 22.0,
+      "mean_credit_iou": 0.7387103429734652,
+      "late_intervention_rate": NaN,
+      "onset_confusion": [
+        [
+          25,
+          16,
+          10,
+          0
+        ],
+        [
+          16,
+          0,
+          1,
+          0
+        ],
+        [
+          18,
+          0,
+          0,
+          0
+        ],
+        [
+          17,
+          0,
+          0,
+          0
+        ]
+      ],
+      "stated_confusion": [
+        [
+          43,
+          3,
+          5,
+          0
+        ],
+        [
+          0,
+          7,
+          10,
+          0
+        ],
+        [
+          0,
+          0,
+          18,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          17
+        ]
+      ],
+      "phase_names": [
+        "approach",
+        "grasp",
+        "lift",
+        "place"
+      ]
+    },
+    "per_root_phase": {
+      "0": {
+        "n": 51.0,
+        "misattribution_rate": 0.5098039215686274,
+        "mean_detection_lag": 48.509803921568626
+      },
+      "1": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 23.705882352941178
+      },
+      "2": {
+        "n": 18.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 11.11111111111111
+      },
+      "3": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 8.882352941176471
+      }
+    },
+    "by_lag_class": {
+      "delayed": {
+        "n": 34.0,
+        "onset_misattribution_rate": 0.8235294117647058,
+        "symptom_misattribution_rate": 0.9117647058823529,
+        "stated_misattribution_rate": 0.4411764705882353,
+        "mean_detection_lag": 45.76470588235294
+      },
+      "immediate": {
+        "n": 35.0,
+        "onset_misattribution_rate": 1.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 10.028571428571428
+      },
+      "short": {
+        "n": 18.0,
+        "onset_misattribution_rate": 0.8333333333333334,
+        "symptom_misattribution_rate": 0.7222222222222222,
+        "stated_misattribution_rate": 0.16666666666666666,
+        "mean_detection_lag": 31.555555555555557
+      },
+      "very_delayed": {
+        "n": 16.0,
+        "onset_misattribution_rate": 0.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 47.0625
+      }
+    },
+    "per_fault": {
+      "grasp_offset": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 67.82352941176471
+      },
+      "premature_close": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.4444444444444444,
+        "mean_takeover_step": 65.77777777777777
+      },
+      "weak_grip": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8888888888888888,
+        "mean_takeover_step": 47.94117647058823
+      },
+      "lift_slip": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 55.27777777777778
+      },
+      "early_release": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.9444444444444444,
+        "mean_takeover_step": 52.470588235294116
+      },
+      "wrong_object": {
+        "n": 18,
+        "detection_rate": 0.8888888888888888,
+        "success_rate_with_correction": 0.7222222222222222,
+        "mean_takeover_step": 47.0625
+      },
+      "none": {
+        "n": 6,
+        "detection_rate": 0.0,
+        "success_rate_with_correction": 1.0,
+        "mean_takeover_step": NaN
+      }
+    },
+    "unnecessary_intervention_rate": 0.0
+  },
+  "0.75": {
+    "config": {
+      "episodes_per_fault": 18,
+      "faults": [
+        "grasp_offset",
+        "premature_close",
+        "weak_grip",
+        "lift_slip",
+        "early_release",
+        "wrong_object"
+      ],
+      "control_episodes": 6,
+      "severity": 0.9,
+      "trace_accuracy": 0.75,
+      "seed": 0,
+      "record_keys": [
+        "proprio"
+      ],
+      "render_images": false,
+      "supervisor": {
+        "reaction_mean": 6.0,
+        "reaction_std": 3.0,
+        "max_reaction": 40,
+        "detection_prob": 0.95,
+        "trace_accuracy": 0.35,
+        "report_prob": 1.0,
+        "stall_patience": 120,
+        "stall_motion_eps": 0.012,
+        "stall_motion_window": 20,
+        "hold_until_end": true,
+        "min_takeover_steps": 25
+      },
+      "expert": {
+        "hover_height": 0.1,
+        "grasp_z_offset": 0.002,
+        "lift_height": 0.18,
+        "place_clearance": 0.012,
+        "pos_gain": 0.8,
+        "yaw_gain": 0.8,
+        "pos_tol": 0.006,
+        "xy_tol": 0.004,
+        "yaw_tol": 0.08,
+        "close_steps": 12,
+        "release_steps": 8,
+        "stage_timeout": 90,
+        "noise_std": 0.0
+      }
+    },
+    "run_stats": {
+      "episodes": 114,
+      "success_rate": 0.7894736842105263,
+      "intervened_episodes": 103,
+      "intervention_rate": 0.9035087719298246,
+      "total_steps": 15628,
+      "corrected_steps": 7976,
+      "corrected_fraction": 0.5103660097261326,
+      "mean_episode_length": 137.08771929824562
+    },
+    "attribution": {
+      "n_episodes": 114,
+      "n_with_intervention": 103,
+      "n_with_ground_truth": 103,
+      "onset_misattribution_rate": 0.7572815533980582,
+      "stated_misattribution_rate": 0.08737864077669903,
+      "n_stated": 103,
+      "mean_detection_lag": 31.339805825242717,
+      "median_detection_lag": 22.0,
+      "mean_credit_iou": 0.7387103429734652,
+      "late_intervention_rate": NaN,
+      "onset_confusion": [
+        [
+          25,
+          16,
+          10,
+          0
+        ],
+        [
+          16,
+          0,
+          1,
+          0
+        ],
+        [
+          18,
+          0,
+          0,
+          0
+        ],
+        [
+          17,
+          0,
+          0,
+          0
+        ]
+      ],
+      "stated_confusion": [
+        [
+          47,
+          2,
+          2,
+          0
+        ],
+        [
+          0,
+          12,
+          5,
+          0
+        ],
+        [
+          0,
+          0,
+          18,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          17
+        ]
+      ],
+      "phase_names": [
+        "approach",
+        "grasp",
+        "lift",
+        "place"
+      ]
+    },
+    "per_root_phase": {
+      "0": {
+        "n": 51.0,
+        "misattribution_rate": 0.5098039215686274,
+        "mean_detection_lag": 48.509803921568626
+      },
+      "1": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 23.705882352941178
+      },
+      "2": {
+        "n": 18.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 11.11111111111111
+      },
+      "3": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 8.882352941176471
+      }
+    },
+    "by_lag_class": {
+      "delayed": {
+        "n": 34.0,
+        "onset_misattribution_rate": 0.8235294117647058,
+        "symptom_misattribution_rate": 0.9117647058823529,
+        "stated_misattribution_rate": 0.2647058823529412,
+        "mean_detection_lag": 45.76470588235294
+      },
+      "immediate": {
+        "n": 35.0,
+        "onset_misattribution_rate": 1.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 10.028571428571428
+      },
+      "short": {
+        "n": 18.0,
+        "onset_misattribution_rate": 0.8333333333333334,
+        "symptom_misattribution_rate": 0.7222222222222222,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 31.555555555555557
+      },
+      "very_delayed": {
+        "n": 16.0,
+        "onset_misattribution_rate": 0.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 47.0625
+      }
+    },
+    "per_fault": {
+      "grasp_offset": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 67.82352941176471
+      },
+      "premature_close": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.4444444444444444,
+        "mean_takeover_step": 65.77777777777777
+      },
+      "weak_grip": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8888888888888888,
+        "mean_takeover_step": 47.94117647058823
+      },
+      "lift_slip": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 55.27777777777778
+      },
+      "early_release": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.9444444444444444,
+        "mean_takeover_step": 52.470588235294116
+      },
+      "wrong_object": {
+        "n": 18,
+        "detection_rate": 0.8888888888888888,
+        "success_rate_with_correction": 0.7222222222222222,
+        "mean_takeover_step": 47.0625
+      },
+      "none": {
+        "n": 6,
+        "detection_rate": 0.0,
+        "success_rate_with_correction": 1.0,
+        "mean_takeover_step": NaN
+      }
+    },
+    "unnecessary_intervention_rate": 0.0
+  },
+  "1.0": {
+    "config": {
+      "episodes_per_fault": 18,
+      "faults": [
+        "grasp_offset",
+        "premature_close",
+        "weak_grip",
+        "lift_slip",
+        "early_release",
+        "wrong_object"
+      ],
+      "control_episodes": 6,
+      "severity": 0.9,
+      "trace_accuracy": 1.0,
+      "seed": 0,
+      "record_keys": [
+        "proprio"
+      ],
+      "render_images": false,
+      "supervisor": {
+        "reaction_mean": 6.0,
+        "reaction_std": 3.0,
+        "max_reaction": 40,
+        "detection_prob": 0.95,
+        "trace_accuracy": 0.35,
+        "report_prob": 1.0,
+        "stall_patience": 120,
+        "stall_motion_eps": 0.012,
+        "stall_motion_window": 20,
+        "hold_until_end": true,
+        "min_takeover_steps": 25
+      },
+      "expert": {
+        "hover_height": 0.1,
+        "grasp_z_offset": 0.002,
+        "lift_height": 0.18,
+        "place_clearance": 0.012,
+        "pos_gain": 0.8,
+        "yaw_gain": 0.8,
+        "pos_tol": 0.006,
+        "xy_tol": 0.004,
+        "yaw_tol": 0.08,
+        "close_steps": 12,
+        "release_steps": 8,
+        "stage_timeout": 90,
+        "noise_std": 0.0
+      }
+    },
+    "run_stats": {
+      "episodes": 114,
+      "success_rate": 0.7894736842105263,
+      "intervened_episodes": 103,
+      "intervention_rate": 0.9035087719298246,
+      "total_steps": 15628,
+      "corrected_steps": 7976,
+      "corrected_fraction": 0.5103660097261326,
+      "mean_episode_length": 137.08771929824562
+    },
+    "attribution": {
+      "n_episodes": 114,
+      "n_with_intervention": 103,
+      "n_with_ground_truth": 103,
+      "onset_misattribution_rate": 0.7572815533980582,
+      "stated_misattribution_rate": 0.0,
+      "n_stated": 103,
+      "mean_detection_lag": 31.339805825242717,
+      "median_detection_lag": 22.0,
+      "mean_credit_iou": 0.7387103429734652,
+      "late_intervention_rate": NaN,
+      "onset_confusion": [
+        [
+          25,
+          16,
+          10,
+          0
+        ],
+        [
+          16,
+          0,
+          1,
+          0
+        ],
+        [
+          18,
+          0,
+          0,
+          0
+        ],
+        [
+          17,
+          0,
+          0,
+          0
+        ]
+      ],
+      "stated_confusion": [
+        [
+          51,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          17,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          18,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          17
+        ]
+      ],
+      "phase_names": [
+        "approach",
+        "grasp",
+        "lift",
+        "place"
+      ]
+    },
+    "per_root_phase": {
+      "0": {
+        "n": 51.0,
+        "misattribution_rate": 0.5098039215686274,
+        "mean_detection_lag": 48.509803921568626
+      },
+      "1": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 23.705882352941178
+      },
+      "2": {
+        "n": 18.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 11.11111111111111
+      },
+      "3": {
+        "n": 17.0,
+        "misattribution_rate": 1.0,
+        "mean_detection_lag": 8.882352941176471
+      }
+    },
+    "by_lag_class": {
+      "delayed": {
+        "n": 34.0,
+        "onset_misattribution_rate": 0.8235294117647058,
+        "symptom_misattribution_rate": 0.9117647058823529,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 45.76470588235294
+      },
+      "immediate": {
+        "n": 35.0,
+        "onset_misattribution_rate": 1.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 10.028571428571428
+      },
+      "short": {
+        "n": 18.0,
+        "onset_misattribution_rate": 0.8333333333333334,
+        "symptom_misattribution_rate": 0.7222222222222222,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 31.555555555555557
+      },
+      "very_delayed": {
+        "n": 16.0,
+        "onset_misattribution_rate": 0.0,
+        "symptom_misattribution_rate": 0.0,
+        "stated_misattribution_rate": 0.0,
+        "mean_detection_lag": 47.0625
+      }
+    },
+    "per_fault": {
+      "grasp_offset": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 67.82352941176471
+      },
+      "premature_close": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.4444444444444444,
+        "mean_takeover_step": 65.77777777777777
+      },
+      "weak_grip": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.8888888888888888,
+        "mean_takeover_step": 47.94117647058823
+      },
+      "lift_slip": {
+        "n": 18,
+        "detection_rate": 1.0,
+        "success_rate_with_correction": 0.8333333333333334,
+        "mean_takeover_step": 55.27777777777778
+      },
+      "early_release": {
+        "n": 18,
+        "detection_rate": 0.9444444444444444,
+        "success_rate_with_correction": 0.9444444444444444,
+        "mean_takeover_step": 52.470588235294116
+      },
+      "wrong_object": {
+        "n": 18,
+        "detection_rate": 0.8888888888888888,
+        "success_rate_with_correction": 0.7222222222222222,
+        "mean_takeover_step": 47.0625
+      },
+      "none": {
+        "n": 6,
+        "detection_rate": 0.0,
+        "success_rate_with_correction": 1.0,
+        "mean_takeover_step": NaN
+      }
+    },
+    "unnecessary_intervention_rate": 0.0
+  }
+}

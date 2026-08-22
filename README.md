@@ -65,9 +65,12 @@ above is that finding: a category defined by causal distance that behaves
 exactly like the immediate one.
 
 **Whether that costs anything** is measured separately, and the answer is the
-most interesting thing here: **no, not in this setup** — see
-[Result 2](#result-2-perfect-attribution-bought-nothing--and-the-reason-is-the-finding).
-Perfect attribution did not beat a supervisor who was right 83% of the time.
+most interesting thing here: acting on a *correct* attribution made the policy
+**worse**. Rewinding to the true cause scored 4.4% against 34.4% for not
+rewinding at all, because restoring to the pre-failure state means the corrective
+demonstration never enters the state the failure produced — so the dataset ends
+up containing no supervision for it. See
+[Result 3](#result-3-with-coverage-held-fixed-rewinding-to-the-cause-is-the-worst-thing-to-do).
 
 **Supporting numbers**
 
@@ -209,7 +212,7 @@ takes longer than doing the task correctly. Every dataset is subsampled to the
 size of the smallest (10,558 frames), so "corrected the right states" is
 separated from "had more data".
 
-### Result 2: perfect attribution bought nothing — and the reason is the finding
+### Result 2: perfect attribution bought nothing, and coverage was the reason
 
 The prediction was that rewinding to the true cause (`oracle`) would beat
 rewinding to the phase the supervisor blamed (`stated`), because only the former
@@ -228,32 +231,93 @@ reliably corrects the states that caused the failure. It did not.
 
 **`stated` vs `oracle`: +1.2 points, confidence intervals overlapping.** Giving
 the system perfect knowledge of the true cause did not measurably beat a
-supervisor who was right 83% of the time. The core hypothesis is not supported
-by this experiment.
+supervisor who was right 83% of the time.
 
-What *does* predict success is where the corrective demonstration **starts**.
-Every evaluation episode begins in `approach`. By the time a supervisor has
-reacted, the dropped object has settled and the phase tracker has correctly
-returned to `approach` — so the naive rewind produces corrections that begin at
-the start of the task, covering exactly the state distribution the policy is
-launched from. Rewinding earlier lands mid-failure, with the object still in
-flight and the phase still `lift` or `place`.
+But the ranking tracks the third column, not the second. Every evaluation
+episode begins in `approach`. By the time the supervisor has reacted, the
+dropped object has settled and the phase tracker has returned to `approach` — so
+the naive rewind happens to produce corrections that start where the policy is
+launched from. The strategies were not being compared on credit assignment at
+all. They were being compared on how much of the task their corrective data
+happened to cover.
 
-For behaviour cloning, **initial-state coverage dominates causal correctness**.
+That is a confound, not a finding. So the experiment was re-run with it removed.
 
-That is not evidence attribution does not matter. It is evidence that the rewind
-protocol as built trades coverage for causal correctness, and that the trade is
-unfavourable. A protocol that rewound to the cause *and* preserved coverage —
-re-running from reset rather than from a snapshot, or mixing in from-scratch
-demonstrations — would separate the two effects. That is the next experiment,
-and identifying it is what this negative result is worth.
+### Result 3: with coverage held fixed, rewinding to the cause is the *worst* thing to do
 
-Reported as measured. The hypothesis was wrong in the direction that makes the
-project more informative, not less.
+Every condition now trains on **one shared pool of 150 clean demonstrations**
+(11,132 frames), collected once and reused verbatim, plus its own corrections
+subsampled to a common budget of 10,558 frames. Initial-state coverage is
+therefore identical by construction, and the only remaining difference is where
+the corrections sit.
 
 ```bash
-make degradation
+make degradation-controlled
 ```
+
+The raw report for every number below is committed in [`results/`](results/), so
+the claims can be checked without a rerun.
+
+<p align="center">
+  <img src="docs/media/rewind_depth.png" alt="Policy success against rewind depth" width="600">
+</p>
+
+| strategy | rewinds to | mean rewind depth | policy success (n=250) |
+|---|---|---|---|
+| `symptom` | first visible | 6.0 steps | **42.0%** [36.0, 48.2] |
+| `onset` | takeover step | 0.0 steps | 34.4% [28.8, 40.5] |
+| `stated` | blamed phase | 33.1 steps | 10.8% [7.5, 15.3] |
+| `oracle` | true cause | 34.3 steps | 4.4% [2.5, 7.7] |
+
+The ordering inverts. `symptom` goes from worst to best; `oracle` goes from
+mid-table to last, and is now the **worst strategy of the four** — beaten by
+`stated`, its own noisy approximation, by 6.4 points (*p* = 0.007).
+
+| comparison | difference | *p* |
+|---|---|---|
+| `symptom` vs `onset` | +7.6 | 0.08 |
+| `onset` vs `stated` | +23.6 | 2.8 × 10⁻¹⁰ |
+| `onset` vs `oracle` | +30.0 | 2.2 × 10⁻¹⁷ |
+| `stated` vs `oracle` | +6.4 | 0.007 |
+
+**Why.** The rewind is a state restore, so the corrective expert takes control at
+the rewind point and drives from there. Rewind 34 steps — back to the moment the
+fault was injected — and the arm is still in a state that looks healthy. The
+expert flies a clean trajectory from it, and the episode simply never enters the
+state the failure would have produced. The dataset ends up with **no supervision
+for the failure at all**. Rewind to the takeover instead and the very first frame
+of the correction *is* the failure state.
+
+Correcting the cause deletes the evidence. That is the tension this project
+found: causal correctness and on-policy coverage pull against each other, and
+under behaviour cloning, coverage wins decisively.
+
+**Two obvious proxies for correction quality both point the wrong way**, which is
+the part worth remembering:
+
+| strategy | corrections that succeed | best val loss | policy success |
+|---|---|---|---|
+| `symptom` | 84.5% | 0.0878 | **42.0%** |
+| `onset` | 86.0% | 0.1013 | 34.4% |
+| `stated` | 88.0% | 0.0895 | 10.8% |
+| `oracle` | **91.5%** | **0.0874** | **4.4%** |
+
+`oracle` produces the cleanest corrections and the lowest validation loss, and
+the worst policy. Held-out loss is computed on the corrective data's own
+distribution; the policy is evaluated on the distribution it induces itself.
+Ranking strategies by either proxy would have inverted the answer.
+
+`symptom` versus `onset` is not resolved (*p* = 0.08). Rewinding a few steps
+before the takeover is plausibly the sweet spot — far enough back to catch the
+failure as it forms, not so far as to skip past it — but this experiment cannot
+say so.
+
+**What this means for the original question.** Misattribution does cost
+something, but not through the channel the hypothesis proposed. The supervisor
+being wrong about *which phase* is a second-order effect. What dominates is that
+acting on any attribution at all — right or wrong — moves the correction away
+from the states that need it. The interesting protocol is not "attribute better";
+it is "attribute for analysis, correct at the symptom."
 
 ---
 
@@ -284,6 +348,13 @@ Stated plainly, because the difference matters:
    weak, and they are reported as such rather than tuned until they look good.
 4. **Simulation only.** No real robot, no sim-to-real claim.
 5. **Language conditioning is templated**, not free-form.
+6. **The rewind protocol is one of several possible ones.** Every conclusion
+   about credit assignment here is a conclusion about *rewind-and-redemonstrate
+   from an exact state snapshot*. A protocol that acted on the attribution
+   differently — reweighting the existing frames rather than replacing them, or
+   re-running from the environment reset — might use a correct attribution
+   without discarding the failure states. That this one cannot is the finding;
+   that no protocol can is not claimed.
 
 ---
 

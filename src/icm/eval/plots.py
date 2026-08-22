@@ -253,6 +253,65 @@ def plot_degradation(
     return out
 
 
+def plot_rewind_depth(report_path: str | Path, out_path: str | Path) -> Path:
+    """Policy success against how far each strategy rewinds before the takeover.
+
+    The companion to :func:`plot_degradation`. Once every condition shares one
+    demonstration pool, initial-state coverage is held fixed and the covariate
+    that survives is rewind depth: the further back the correction starts, the
+    less of it lands on the states the failure actually produced.
+    """
+    plt = _plt()
+    report = json.loads(Path(report_path).read_text())
+    results = report["results"]
+    order = [s for s in ("onset", "symptom", "stated", "oracle") if s in results]
+
+    rates, lows, highs, depth = [], [], [], []
+    for name in order:
+        e = results[name]["eval"]
+        rates.append(e["success_rate"])
+        lows.append(e["success_rate"] - e["ci95_low"])
+        highs.append(e["ci95_high"] - e["success_rate"])
+        depth.append(results[name]["collection"]["mean_rewind_offset"])
+
+    fig, ax = plt.subplots(figsize=(6.0, 3.6))
+    colours = {"onset": "#94a3b8", "symptom": "#60a5fa", "stated": "#f59e0b", "oracle": "#22c55e"}
+    ax.bar(
+        order,
+        rates,
+        yerr=[lows, highs],
+        capsize=4,
+        color=[colours.get(o, "#888") for o in order],
+        width=0.6,
+        error_kw={"linewidth": 1.0},
+    )
+    ax.set_ylabel("task success rate")
+    ax.set_ylim(0, max(0.6, max(rates) * 1.45) if rates else 1.0)
+    n = results[order[0]]["eval"]["n"] if order else 0
+    ax.set_xlabel(
+        f"credit assignment strategy   (n={n} evaluation episodes, 95% CI,\n"
+        "equal correction frames + one shared demonstration pool)",
+        fontsize=8,
+    )
+
+    ax2 = ax.twinx()
+    ax2.plot(order, depth, marker="o", color="#111827", linewidth=1.6, label="mean rewind depth")
+    ax2.set_ylabel("steps rewound before the takeover", fontsize=8)
+    ax2.set_ylim(0, max(depth) * 1.3 if depth else 1.0)
+    ax2.grid(False)
+    ax2.legend(frameon=False, fontsize=8, loc="upper center")
+    ax.set_title(
+        "With coverage held fixed, rewinding to the cause\nremoves the states that need correcting",
+        fontsize=9,
+    )
+    fig.tight_layout()
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out)
+    plt.close(fig)
+    return out
+
+
 def plot_trace_sweep(sweep_path: str | Path, out_path: str | Path) -> Path:
     """Misattribution against supervisor tracing accuracy.
 
@@ -301,11 +360,19 @@ def build_all(run_dir: str | Path, out_dir: str | Path = "docs/media") -> list[P
     if (run_dir / "sweep.json").is_file():
         made.append(plot_trace_sweep(run_dir / "sweep.json", out_dir / "trace_sweep.png"))
     if (run_dir / "degradation.json").is_file():
-        made.append(
-            plot_degradation(
-                run_dir / "degradation.json",
-                out_dir / "degradation.png",
-                coverage=correction_start_coverage(run_dir),
+        report = json.loads((run_dir / "degradation.json").read_text())
+        # The coverage-controlled variant answers a different question, so it
+        # gets its own figure rather than silently overwriting the first one.
+        if report.get("config", {}).get("shared_demo_episodes"):
+            made.append(
+                plot_rewind_depth(run_dir / "degradation.json", out_dir / "rewind_depth.png")
             )
-        )
+        else:
+            made.append(
+                plot_degradation(
+                    run_dir / "degradation.json",
+                    out_dir / "degradation.png",
+                    coverage=correction_start_coverage(run_dir),
+                )
+            )
     return made

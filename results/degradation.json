@@ -1,0 +1,279 @@
+{
+  "config": {
+    "strategies": [
+      "onset",
+      "symptom",
+      "stated",
+      "oracle"
+    ],
+    "collect_episodes": 200,
+    "eval_episodes": 250,
+    "trace_accuracy": 0.35,
+    "faults": [
+      "grasp_offset",
+      "weak_grip",
+      "wrong_object",
+      "lift_slip",
+      "early_release"
+    ],
+    "severity_range": [
+      0.8,
+      1.0
+    ],
+    "equalise_frames": true,
+    "seed": 0,
+    "state_key": "privileged",
+    "train": {
+      "steps": 6000,
+      "batch_size": 128,
+      "lr": 0.0003,
+      "weight_decay": 0.0001,
+      "warmup_steps": 500,
+      "grad_clip": 1.0,
+      "num_workers": 0,
+      "val_fraction": 0.1,
+      "log_every": 1500,
+      "eval_every": 1500,
+      "checkpoint_every": 3000,
+      "seed": 0,
+      "device": "cpu",
+      "amp": true,
+      "compile": false
+    }
+  },
+  "results": {
+    "onset": {
+      "collection": {
+        "episodes": 200,
+        "intervention_rate": 0.94,
+        "success_before_correction": 0.0,
+        "success_after_correction": 0.86,
+        "correction_steps": 13288,
+        "mean_rewind_offset": 0.0,
+        "attribution_accuracy": 0.8191489361702128
+      },
+      "frames": 10558,
+      "frames_available": 13288,
+      "train": {
+        "steps": 6000,
+        "final_val_loss": 0.0928194413964565,
+        "best_val_loss": 0.0928194413964565,
+        "train_frames": 9544,
+        "val_frames": 1014,
+        "dataset": {
+          "frames": 10558,
+          "episodes_contributing": 188,
+          "runs": 1,
+          "credit": "onset",
+          "supervision": "corrections"
+        },
+        "device": "cpu",
+        "wall_time_s": 889.8353192806244
+      },
+      "eval": {
+        "n": 250,
+        "successes": 174,
+        "success_rate": 0.696,
+        "ci95_low": 0.6363691519284894,
+        "ci95_high": 0.749698379949658,
+        "mean_episode_length": 113.772,
+        "intervention_rate": 0.0
+      },
+      "failure_breakdown": {
+        "done": 58,
+        "approach": 14,
+        "grasp": 4
+      }
+    },
+    "symptom": {
+      "collection": {
+        "episodes": 200,
+        "intervention_rate": 0.94,
+        "success_before_correction": 0.0,
+        "success_after_correction": 0.845,
+        "correction_steps": 12896,
+        "mean_rewind_offset": 6.037234042553192,
+        "attribution_accuracy": 0.8138297872340425
+      },
+      "frames": 10558,
+      "frames_available": 12896,
+      "train": {
+        "steps": 6000,
+        "final_val_loss": 0.08677026538812008,
+        "best_val_loss": 0.08677026538812008,
+        "train_frames": 9588,
+        "val_frames": 970,
+        "dataset": {
+          "frames": 10558,
+          "episodes_contributing": 188,
+          "runs": 1,
+          "credit": "onset",
+          "supervision": "corrections"
+        },
+        "device": "cpu",
+        "wall_time_s": 81.56829881668091
+      },
+      "eval": {
+        "n": 250,
+        "successes": 28,
+        "success_rate": 0.112,
+        "ci95_low": 0.07863379432036412,
+        "ci95_high": 0.15711007114534364,
+        "mean_episode_length": 208.904,
+        "intervention_rate": 0.0
+      },
+      "failure_breakdown": {
+        "done": 24,
+        "approach": 180,
+        "place": 5,
+        "grasp": 10,
+        "lift": 3
+      }
+    },
+    "stated": {
+      "collection": {
+        "episodes": 200,
+        "intervention_rate": 0.94,
+        "success_before_correction": 0.0,
+        "success_after_correction": 0.88,
+        "correction_steps": 10673,
+        "mean_rewind_offset": 33.06382978723404,
+        "attribution_accuracy": 0.8297872340425532
+      },
+      "frames": 10558,
+      "frames_available": 10673,
+      "train": {
+        "steps": 6000,
+        "final_val_loss": 0.084153921117444,
+        "best_val_loss": 0.084153921117444,
+        "train_frames": 9882,
+        "val_frames": 676,
+        "dataset": {
+          "frames": 10558,
+          "episodes_contributing": 188,
+          "runs": 1,
+          "credit": "onset",
+          "supervision": "corrections"
+        },
+        "device": "cpu",
+        "wall_time_s": 80.82697701454163
+      },
+      "eval": {
+        "n": 250,
+        "successes": 55,
+        "success_rate": 0.22,
+        "ci95_low": 0.17310114571003238,
+        "ci95_high": 0.2753738087497567,
+        "mean_episode_length": 184.168,
+        "intervention_rate": 0.0
+      },
+      "failure_breakdown": {
+        "approach": 149,
+        "done": 40,
+        "grasp": 5,
+        "lift": 1
+      }
+    },
+    "oracle": {
+      "collection": {
+        "episodes": 200,
+        "intervention_rate": 0.94,
+        "success_before_correction": 0.0,
+        "success_after_correction": 0.915,
+        "correction_steps": 10558,
+        "mean_rewind_offset": 34.297872340425535,
+        "attribution_accuracy": 0.8297872340425532
+      },
+      "frames": 10558,
+      "frames_available": 10558,
+      "train": {
+        "steps": 6000,
+        "final_val_loss": 0.07524452753239413,
+        "best_val_loss": 0.07524452753239413,
+        "train_frames": 9787,
+        "val_frames": 771,
+        "dataset": {
+          "frames": 10558,
+          "episodes_contributing": 188,
+          "runs": 1,
+          "credit": "onset",
+          "supervision": "corrections"
+        },
+        "device": "cpu",
+        "wall_time_s": 83.29870080947876
+      },
+      "eval": {
+        "n": 250,
+        "successes": 52,
+        "success_rate": 0.208,
+        "ci95_low": 0.1622930646183891,
+        "ci95_high": 0.26254510217539095,
+        "mean_episode_length": 186.776,
+        "intervention_rate": 0.0
+      },
+      "failure_breakdown": {
+        "done": 47,
+        "approach": 141,
+        "lift": 1,
+        "place": 7,
+        "grasp": 2
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "a": "onset",
+      "b": "symptom",
+      "success_a": 0.696,
+      "success_b": 0.112,
+      "difference": 0.584,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "onset",
+      "b": "stated",
+      "success_a": 0.696,
+      "success_b": 0.22,
+      "difference": 0.476,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "onset",
+      "b": "oracle",
+      "success_a": 0.696,
+      "success_b": 0.208,
+      "difference": 0.488,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "symptom",
+      "b": "stated",
+      "success_a": 0.112,
+      "success_b": 0.22,
+      "difference": -0.108,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "symptom",
+      "b": "oracle",
+      "success_a": 0.112,
+      "success_b": 0.208,
+      "difference": -0.09599999999999999,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "stated",
+      "b": "oracle",
+      "success_a": 0.22,
+      "success_b": 0.208,
+      "difference": 0.01200000000000001,
+      "intervals_overlap": true,
+      "resolved": false
+    }
+  ]
+}

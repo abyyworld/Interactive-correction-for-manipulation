@@ -1,0 +1,296 @@
+{
+  "config": {
+    "strategies": [
+      "onset",
+      "symptom",
+      "stated",
+      "oracle"
+    ],
+    "collect_episodes": 200,
+    "eval_episodes": 250,
+    "trace_accuracy": 0.35,
+    "faults": [
+      "grasp_offset",
+      "weak_grip",
+      "wrong_object",
+      "lift_slip",
+      "early_release"
+    ],
+    "severity_range": [
+      0.8,
+      1.0
+    ],
+    "equalise_frames": true,
+    "shared_demo_episodes": 150,
+    "seed": 0,
+    "state_key": "privileged",
+    "train": {
+      "steps": 6000,
+      "batch_size": 128,
+      "lr": 0.0003,
+      "weight_decay": 0.0001,
+      "warmup_steps": 500,
+      "grad_clip": 1.0,
+      "num_workers": 0,
+      "val_fraction": 0.1,
+      "log_every": 1500,
+      "eval_every": 1500,
+      "checkpoint_every": 3000,
+      "seed": 0,
+      "device": "cpu",
+      "amp": true,
+      "compile": false
+    }
+  },
+  "results": {
+    "onset": {
+      "collection": {
+        "episodes": 200,
+        "intervention_rate": 0.94,
+        "success_before_correction": 0.0,
+        "success_after_correction": 0.86,
+        "correction_steps": 13288,
+        "mean_rewind_offset": 0.0,
+        "attribution_accuracy": 0.8191489361702128,
+        "reused": true
+      },
+      "frames": 10558,
+      "frames_available": 13288,
+      "train": {
+        "steps": 6000,
+        "final_val_loss": 0.1012736925561177,
+        "best_val_loss": 0.1012736925561177,
+        "train_frames": 19372,
+        "val_frames": 2318,
+        "dataset": {
+          "frames": 21690,
+          "frames_per_root": {
+            "data_onset": 10558,
+            "data_shared_demos": 11132
+          },
+          "episodes_contributing": 338,
+          "runs": 2,
+          "credit": "onset",
+          "supervision": "corrections"
+        },
+        "device": "cpu",
+        "wall_time_s": 288.2750732898712
+      },
+      "eval": {
+        "n": 250,
+        "successes": 86,
+        "success_rate": 0.344,
+        "ci95_low": 0.2878738024449977,
+        "ci95_high": 0.40484795789688477,
+        "mean_episode_length": 166.648,
+        "intervention_rate": 0.0
+      },
+      "failure_breakdown": {
+        "approach": 153,
+        "place": 2,
+        "grasp": 7,
+        "lift": 2
+      }
+    },
+    "symptom": {
+      "collection": {
+        "episodes": 200,
+        "intervention_rate": 0.94,
+        "success_before_correction": 0.0,
+        "success_after_correction": 0.845,
+        "correction_steps": 12896,
+        "mean_rewind_offset": 6.037234042553192,
+        "attribution_accuracy": 0.8138297872340425,
+        "reused": true
+      },
+      "frames": 10558,
+      "frames_available": 12896,
+      "train": {
+        "steps": 6000,
+        "final_val_loss": 0.0877668723968686,
+        "best_val_loss": 0.0877668723968686,
+        "train_frames": 19446,
+        "val_frames": 2244,
+        "dataset": {
+          "frames": 21690,
+          "frames_per_root": {
+            "data_symptom": 10558,
+            "data_shared_demos": 11132
+          },
+          "episodes_contributing": 338,
+          "runs": 2,
+          "credit": "onset",
+          "supervision": "corrections"
+        },
+        "device": "cpu",
+        "wall_time_s": 90.47227787971497
+      },
+      "eval": {
+        "n": 250,
+        "successes": 105,
+        "success_rate": 0.42,
+        "ci95_low": 0.360481217387437,
+        "ci95_high": 0.48194019817250267,
+        "mean_episode_length": 156.464,
+        "intervention_rate": 0.0
+      },
+      "failure_breakdown": {
+        "approach": 121,
+        "grasp": 14,
+        "lift": 10
+      }
+    },
+    "stated": {
+      "collection": {
+        "episodes": 200,
+        "intervention_rate": 0.94,
+        "success_before_correction": 0.0,
+        "success_after_correction": 0.88,
+        "correction_steps": 10673,
+        "mean_rewind_offset": 33.06382978723404,
+        "attribution_accuracy": 0.8297872340425532,
+        "reused": true
+      },
+      "frames": 10558,
+      "frames_available": 10673,
+      "train": {
+        "steps": 6000,
+        "final_val_loss": 0.08947055752818188,
+        "best_val_loss": 0.08947055752818188,
+        "train_frames": 19413,
+        "val_frames": 2277,
+        "dataset": {
+          "frames": 21690,
+          "frames_per_root": {
+            "data_stated": 10558,
+            "data_shared_demos": 11132
+          },
+          "episodes_contributing": 338,
+          "runs": 2,
+          "credit": "onset",
+          "supervision": "corrections"
+        },
+        "device": "cpu",
+        "wall_time_s": 91.84708976745605
+      },
+      "eval": {
+        "n": 250,
+        "successes": 27,
+        "success_rate": 0.108,
+        "ci95_low": 0.07529144734526685,
+        "ci95_high": 0.1525734888984379,
+        "mean_episode_length": 203.852,
+        "intervention_rate": 0.0
+      },
+      "failure_breakdown": {
+        "approach": 218,
+        "grasp": 4,
+        "lift": 1
+      }
+    },
+    "oracle": {
+      "collection": {
+        "episodes": 200,
+        "intervention_rate": 0.94,
+        "success_before_correction": 0.0,
+        "success_after_correction": 0.915,
+        "correction_steps": 10558,
+        "mean_rewind_offset": 34.297872340425535,
+        "attribution_accuracy": 0.8297872340425532,
+        "reused": true
+      },
+      "frames": 10558,
+      "frames_available": 10558,
+      "train": {
+        "steps": 6000,
+        "final_val_loss": 0.08740980697025792,
+        "best_val_loss": 0.08740980697025792,
+        "train_frames": 19341,
+        "val_frames": 2349,
+        "dataset": {
+          "frames": 21690,
+          "frames_per_root": {
+            "data_oracle": 10558,
+            "data_shared_demos": 11132
+          },
+          "episodes_contributing": 338,
+          "runs": 2,
+          "credit": "onset",
+          "supervision": "corrections"
+        },
+        "device": "cpu",
+        "wall_time_s": 91.06905460357666
+      },
+      "eval": {
+        "n": 250,
+        "successes": 11,
+        "success_rate": 0.044,
+        "ci95_low": 0.024743541619069078,
+        "ci95_high": 0.07705852707258744,
+        "mean_episode_length": 213.032,
+        "intervention_rate": 0.0
+      },
+      "failure_breakdown": {
+        "approach": 234,
+        "grasp": 4,
+        "place": 1
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "a": "onset",
+      "b": "symptom",
+      "success_a": 0.344,
+      "success_b": 0.42,
+      "difference": -0.07600000000000001,
+      "intervals_overlap": true,
+      "resolved": false
+    },
+    {
+      "a": "onset",
+      "b": "stated",
+      "success_a": 0.344,
+      "success_b": 0.108,
+      "difference": 0.236,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "onset",
+      "b": "oracle",
+      "success_a": 0.344,
+      "success_b": 0.044,
+      "difference": 0.3,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "symptom",
+      "b": "stated",
+      "success_a": 0.42,
+      "success_b": 0.108,
+      "difference": 0.312,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "symptom",
+      "b": "oracle",
+      "success_a": 0.42,
+      "success_b": 0.044,
+      "difference": 0.376,
+      "intervals_overlap": false,
+      "resolved": true
+    },
+    {
+      "a": "stated",
+      "b": "oracle",
+      "success_a": 0.108,
+      "success_b": 0.044,
+      "difference": 0.064,
+      "intervals_overlap": true,
+      "resolved": false
+    }
+  ]
+}

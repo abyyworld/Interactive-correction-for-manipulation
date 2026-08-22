@@ -132,18 +132,17 @@ It is not a convenience feature.
 
 ### What the experiment actually found
 
-The prediction failed, and the failure is the useful part.
+The prediction failed twice, in two different directions, and the second failure
+is the result worth keeping.
 
-`stated` (rewind to the phase the supervisor blamed) and `oracle` (rewind to the
-true cause) are **statistically indistinguishable**: 22.0% versus 20.8% over 250
-evaluation episodes, intervals overlapping. Giving the system perfect causal
-knowledge did not beat a supervisor who was right 83% of the time.
+**First pass.** `stated` (rewind to the phase the supervisor blamed) and `oracle`
+(rewind to the true cause) came out **statistically indistinguishable**: 22.0%
+versus 20.8% over 250 evaluation episodes, intervals overlapping. Meanwhile
+`onset` — the naive strategy with no rewind at all — reached 69.6%, far ahead of
+every rewinding condition.
 
-Meanwhile `onset` — the naive strategy with no rewind at all — reached 69.6%,
-far ahead of every rewinding condition.
-
-The covariate that explains the ranking is not attribution accuracy but where
-the corrective demonstration *begins*:
+The covariate that explained that ranking was not attribution accuracy but where
+the corrective demonstration *began*:
 
 | strategy | corrections starting in APPROACH | success |
 |---|---|---|
@@ -155,28 +154,64 @@ the corrective demonstration *begins*:
 Every evaluation episode starts in APPROACH. By the time the supervisor reacts,
 the dropped object has settled and the phase tracker has correctly reverted to
 APPROACH, so the naive rewind happens to produce corrections that begin at the
-start of the task. Rewinding earlier lands mid-failure, where the object is
-still in flight.
+start of the task. That is a confound: the conditions differed in how much of
+the task their data covered, not only in where they assigned credit.
 
-So the rewind protocol as built **trades initial-state coverage for causal
-correctness**, and for behaviour cloning the coverage term dominates. The two
-effects are confounded in this design, which is a limitation of the protocol
-rather than a fact about attribution.
+**Second pass, with the confound removed.** Every condition now trains on one
+shared pool of 150 clean demonstrations (11,132 frames), collected once and
+reused byte-for-byte, plus its own corrections subsampled to a common budget of
+10,558 frames. Initial-state coverage is identical by construction.
 
-The fix is straightforward and is the next experiment: rewind to the cause but
-re-run from the environment reset rather than from a mid-episode snapshot, so
-that every corrective demonstration starts from the task's initial distribution
-regardless of where the error was attributed. That isolates causal correctness
-from coverage, which this experiment could not.
+| strategy | rewinds to | mean rewind depth | success (n=250) |
+|---|---|---|---|
+| `symptom` | first visible | 6.0 steps | **42.0%** [36.0, 48.2] |
+| `onset` | takeover step | 0.0 steps | 34.4% [28.8, 40.5] |
+| `stated` | blamed phase | 33.1 steps | 10.8% [7.5, 15.3] |
+| `oracle` | true cause | 34.3 steps | 4.4% [2.5, 7.7] |
 
-### Why the corrections differ at all
+The ordering inverts. `symptom` moves from worst to best. `oracle` becomes the
+worst of the four, losing to `stated` — its own noisy approximation — by 6.4
+points (*p* = 0.007), and to `onset` by 30.0 points (*p* = 2 × 10⁻¹⁷).
 
-With `oracle`, the corrective demonstration begins from the *pre-failure* state —
-the states the policy actually visits when it goes wrong — so it learns what to
-do there. With `onset`, it begins from the *post-failure* state, where the object
-has already been dropped or knocked away. Those states only occur after the
-policy has already failed, so training on them teaches recovery from a situation
-the policy will keep entering.
+The surviving covariate is rewind depth, and the mechanism is mechanical. The
+rewind is an exact state restore, so the corrective expert takes control at the
+rewind point and flies from there. Rewind 34 steps and the arm is still in a
+state that looks healthy; the expert drives a clean trajectory out of it and the
+episode never enters the state the failure would have produced. The dataset
+therefore contains **no supervision for the failure at all** — it contains
+another demonstration. Rewind to the takeover instead, and the first frame of
+the correction *is* the failure state.
+
+Correcting the cause deletes the evidence.
+
+### Two proxies for correction quality both invert the answer
+
+| strategy | corrections that succeed | best val loss | policy success |
+|---|---|---|---|
+| `symptom` | 84.5% | 0.0878 | **42.0%** |
+| `onset` | 86.0% | 0.1013 | 34.4% |
+| `stated` | 88.0% | 0.0895 | 10.8% |
+| `oracle` | **91.5%** | **0.0874** | **4.4%** |
+
+`oracle` produces the highest-quality corrections by both available offline
+measures and the worst policy by the only measure that matters. Validation loss
+is computed on the corrective data's own distribution; the policy is evaluated on
+the distribution it induces itself. When a protocol changes *which states* end up
+in the dataset, held-out loss stops being a proxy for anything, because the
+held-out set moved too.
+
+This is worth stating plainly because it is the trap the experiment nearly fell
+into: had the strategies been ranked by validation loss, or by how often the
+corrections themselves succeeded, the conclusion would have been the exact
+opposite of the truth.
+
+### What is not resolved
+
+`symptom` versus `onset` is +7.6 points at *p* = 0.08 — suggestive, not resolved.
+Rewinding a few steps before the takeover is plausibly the sweet spot: far enough
+back to catch the failure as it forms, not so far as to step over it. Separating
+those two would need either more evaluation episodes or a deliberate sweep over
+small rewind depths, which this experiment did not run.
 
 ### Controls
 
@@ -186,7 +221,15 @@ the policy will keep entering.
   are produced — and not in the obvious direction: `onset` yields *more*, because
   recovering from a failure takes longer than doing the task correctly. Every
   dataset is subsampled to the size of the smallest, so "corrected the right
-  states" is separated from "had more data".
+  states" is separated from "had more data". The subsample is drawn uniformly
+  across each source's frames, so all 188 corrective episodes still contribute
+  under every condition; capping by truncation would have dropped whole episodes
+  and reintroduced a coverage difference through the back door.
+- **Matched initial-state coverage.** In the controlled variant, one pool of 150
+  scripted demonstrations is collected once and reused byte-for-byte by all four
+  conditions. This is the control that changed the answer, and it is checked by a
+  regression test: an earlier version silently dropped the pool, and the
+  "controlled" run reproduced the uncontrolled one to three decimal places.
 - **Confidence intervals on everything.** Wilson intervals, and the comparison
   says explicitly when two conditions are not distinguishable. At n=50, 80% vs
   60% is *not* a resolved difference, and reporting it as one would be wrong.
@@ -217,9 +260,15 @@ asking them to reason harder about causes. It is surfacing failures earlier: a
 grip-force readout, a slip indicator, anything that moves the symptom closer to
 the cause. That is what the VR study should test first.
 
-**From the degradation result.** Before investing in eliciting attributions from
-supervisors, check whether the learner can use them. Here it could not: perfect
-attribution was indistinguishable from imperfect, while a coverage effect nobody
-was measuring moved success by 48 points. Any interactive-correction system
-should measure the coverage its corrections provide before attributing a
-difference to the quality of the corrections themselves.
+**From the degradation result.** Attribute for analysis; correct at the symptom.
+Knowing that a lift-phase drop was really a grasp-phase error is worth a great
+deal for diagnosis — it tells you what to fix in the policy, the gripper or the
+task design. It is worth negative value as a *rewind target*, because acting on
+it moves the correction off the states the policy actually fails in. The two uses
+of an attribution are separable, and this experiment says only the first pays.
+
+The corollary for anyone building such a system: measure where your corrections
+land before you attribute a difference to their quality. Both offline proxies
+available here — how often the corrections themselves succeed, and held-out loss
+— ranked the strategies in exactly the wrong order, because the protocol changed
+which states were in the dataset and the held-out set moved with it.
