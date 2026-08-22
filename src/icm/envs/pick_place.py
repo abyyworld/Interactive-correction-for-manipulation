@@ -143,7 +143,21 @@ class PickPlaceEnv:
         self.target_name = self.object_specs[0].name
 
         self.goal_pos = np.array(GOAL_POS, dtype=float)
+        # Faults may weaken the gripper by lowering its force limit, which is a
+        # mutation of the *model*. The env owns restoring it, so an injector can
+        # never leak a weakened gripper into the next episode - a bug that would
+        # silently contaminate every subsequent rollout.
+        self._orig_gripper_forcerange = self.model.actuator_forcerange[
+            self.robot.gripper_actuator_id
+        ].copy()
         self.np_random = np.random.default_rng(seed)
+        # Faults may weaken the gripper by lowering its force limit, which mutates
+        # the *model*. The env owns capturing and restoring the nominal value, so
+        # an injector can never leak a weakened gripper into the next episode - a
+        # bug that would silently contaminate every subsequent rollout.
+        self._orig_gripper_forcerange = self.model.actuator_forcerange[
+            self.robot.gripper_actuator_id
+        ].copy()
         self._substeps = cfg.substeps()
         self._step_count = 0
         self._target_pos = np.zeros(3)
@@ -208,6 +222,7 @@ class PickPlaceEnv:
         cfg = self.config
 
         mujoco.mj_resetData(self.model, self.data)
+        self.model.actuator_forcerange[self.robot.gripper_actuator_id] = self._orig_gripper_forcerange
         ready = self.robot.ready_qpos()
         self.robot.reset_arm(ready, gripper_opening=1.0)
 
