@@ -277,11 +277,14 @@ def _train_with_budget(data_path, run_dir, dcfg, cfg, budget, shared_demos=None)
     import subprocess
     import sys
 
+    # Root order matters: --cap-per-root is positional, so the corrections must
+    # come first and the shared demo pool second.
+    roots = [str(data_path)] + ([str(shared_demos)] if shared_demos is not None else [])
     cmd = [
         sys.executable,
         "-m",
         "icm.cli.train",
-        str(data_path),
+        *roots,
         "-o",
         str(run_dir),
         "--steps",

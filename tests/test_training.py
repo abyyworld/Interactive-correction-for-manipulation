@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib.util
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -219,3 +220,88 @@ def test_training_runs_end_to_end_in_a_subprocess(run_dir, tmp_path):
     assert proc.returncode == 0, proc.stderr[-3000:]
     assert (out / "checkpoint.pt").is_file()
     assert (out / "metrics.jsonl").is_file()
+
+
+def test_per_root_cap_is_applied_per_source(run_dir, tmp_path):
+    """Each source is capped independently.
+
+    This is the control that separates "which states were corrected" from "how
+    much data there was": one source is held fixed while the other is matched in
+    size. Capping the total instead would trim both and reintroduce the
+    difference being controlled for.
+    """
+    import shutil
+
+    from icm.training.dataset import DatasetConfig, InterventionDataset
+
+    # Two distinct directories: frames_per_root is keyed by directory name, so a
+    # duplicate root would collapse into a single entry.
+    second = tmp_path / "second_run"
+    shutil.copytree(run_dir, second)
+
+    uncapped = InterventionDataset(
+        [run_dir, second],
+        DatasetConfig(supervision="corrections", state_key="privileged"),
+    )
+    counts_uncapped = uncapped.summary()["frames_per_root"]
+    assert len(counts_uncapped) == 2
+    assert min(counts_uncapped.values()) > 10
+
+    capped = InterventionDataset(
+        [run_dir, second],
+        DatasetConfig(
+            supervision="corrections",
+            state_key="privileged",
+            frame_cap_per_root=(10, 10**9),
+        ),
+    )
+    counts = capped.summary()["frames_per_root"]
+    assert counts[run_dir.name] == 10, "first root should be capped"
+    assert counts[second.name] == counts_uncapped[second.name], "second root untouched"
+
+
+def test_shared_demo_pool_reaches_the_training_subprocess(run_dir, tmp_path, monkeypatch):
+    """The shared-demo control must actually be passed to the trainer.
+
+    Regression test: an earlier version constructed the subprocess command with a
+    single data root, so --shared-demos silently had no effect and the controlled
+    experiment reproduced the uncontrolled one exactly.
+    """
+    import icm.study.degradation as degradation
+
+    captured = {}
+
+    class _Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        out = Path(cmd[cmd.index("-o") + 1])
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "done.json").write_text("{}")
+        return _Result()
+
+    # degradation imports subprocess inside the function, so patch the module
+    # itself rather than an attribute that does not exist on it.
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    from icm.training.dataset import DatasetConfig
+
+    cfg = degradation.DegradationConfig(shared_demo_episodes=5)
+    degradation._train_with_budget(
+        run_dir,
+        tmp_path / "out",
+        DatasetConfig(state_key="privileged"),
+        cfg,
+        budget=123,
+        shared_demos=tmp_path / "demos",
+    )
+    cmd = captured["cmd"]
+    assert str(tmp_path / "demos") in cmd, "shared demo pool missing from the command"
+    assert str(run_dir) in cmd
+    # Corrections capped, demo pool uncapped, in that order.
+    i = cmd.index("--cap-per-root")
+    assert cmd[i + 1 : i + 3] == ["123", "-1"]
+    assert cmd.index(str(run_dir)) < cmd.index(str(tmp_path / "demos"))
